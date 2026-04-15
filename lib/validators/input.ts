@@ -18,3 +18,24 @@ export const regenerateSectionSchema = z.object({
   cvText: z.string().min(80),
   jobAdText: z.string().min(80),
 });
+
+export const updateProjectDocumentsSchema = z.object({
+  projectId: z.string().min(1),
+  documents: z.object({
+    analysis_summary_et: z.string(),
+    cv_et: z.string(),
+    motivation_letter_et: z.string(),
+    statement_short_et: z.string(),
+    statement_long_et: z.string(),
+  }),
+  changeSources: z
+    .object({
+      analysis_summary_et: z.enum(["manual_edit", "restored"]).optional(),
+      cv_et: z.enum(["manual_edit", "restored"]).optional(),
+      motivation_letter_et: z.enum(["manual_edit", "restored"]).optional(),
+      statement_short_et: z.enum(["manual_edit", "restored"]).optional(),
+      statement_long_et: z.enum(["manual_edit", "restored"]).optional(),
+    })
+    .partial()
+    .optional(),
+});

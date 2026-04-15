@@ -1,7 +1,13 @@
 import { getOpenAIClient } from "@/lib/ai/client";
-import { ANALYSIS_INSTRUCTIONS, GENERATION_INSTRUCTIONS, SYSTEM_PROMPT } from "@/lib/ai/prompts";
+import {
+  ANALYSIS_INSTRUCTIONS,
+  GENERATION_INSTRUCTIONS,
+  SECTION_REGENERATION_INSTRUCTIONS,
+  SYSTEM_PROMPT,
+} from "@/lib/ai/prompts";
 import { analysisSchema, documentsSchema } from "@/lib/ai/schemas";
-import type { AnalysisResult, GeneratedDocuments } from "@/types";
+import { DOCUMENT_SECTION_KEYS } from "@/types";
+import type { AnalysisResult, DocumentSectionKey, GeneratedDocuments } from "@/types";
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5";
 
@@ -77,4 +83,64 @@ export async function generateDocuments(cvText: string, jobAdText: string, analy
 
   const raw = response.output_text;
   return documentsSchema.parse(JSON.parse(raw));
+}
+
+export async function regenerateDocumentSection(
+  cvText: string,
+  jobAdText: string,
+  analysis: AnalysisResult,
+  section: DocumentSectionKey,
+  currentContent: string
+): Promise<string> {
+  const client = getOpenAIClient();
+  const response = await client.responses.create({
+    model: MODEL,
+    input: [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: `${SECTION_REGENERATION_INSTRUCTIONS}
+
+SECTION TO REGENERATE: ${section}
+
+ANALYSIS:
+${JSON.stringify(analysis, null, 2)}
+
+CURRENT SECTION CONTENT:
+${currentContent}
+
+CV:
+${cvText}
+
+JOB AD:
+${jobAdText}`,
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "regenerated_section",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: DOCUMENT_SECTION_KEYS.reduce((acc, key) => {
+            if (key === section) {
+              acc[key] = { type: "string" };
+            }
+            return acc;
+          }, {} as Record<string, { type: "string" }>),
+          required: [section],
+        },
+      },
+    },
+  });
+
+  const raw = JSON.parse(response.output_text) as Partial<GeneratedDocuments>;
+  const content = raw[section];
+
+  if (typeof content !== "string") {
+    throw new Error(`Regenerated section ${section} is missing`);
+  }
+
+  return content;
 }

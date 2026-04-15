@@ -1,16 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
+import { regenerateDocumentSection } from "@/lib/ai/service";
 import { requireApiUser } from "@/lib/auth";
+import { normalizeStoredDocuments, updateDocumentSection } from "@/lib/documents";
+import { getProject, saveProject } from "@/lib/store";
 import { regenerateSectionSchema } from "@/lib/validators/input";
+import { normalizeText } from "@/lib/parsers/text";
 
 export async function POST(request: NextRequest) {
-  const { error } = await requireApiUser();
-  if (error) {
-    return error;
-  }
+  try {
+    const { error, user } = await requireApiUser();
+    if (error) {
+      return error;
+    }
 
-  const body = await request.json();
-  const parsed = regenerateSectionSchema.parse(body);
-  return NextResponse.json({
-    message: `Regenerate single section flow placeholder for ${parsed.section}`,
-  });
+    const body = await request.json();
+    const parsed = regenerateSectionSchema.parse(body);
+    const project = await getProject(parsed.projectId, user.id);
+
+    if (!project?.analysis || !project.documents) {
+      return NextResponse.json({ error: "Project documents are not ready yet" }, { status: 400 });
+    }
+
+    const currentDocuments = normalizeStoredDocuments(project.documents, project.updatedAt);
+    const content = await regenerateDocumentSection(
+      normalizeText(project.cvText || parsed.cvText),
+      normalizeText(project.jobAdText || parsed.jobAdText),
+      project.analysis,
+      parsed.section,
+      currentDocuments[parsed.section]
+    );
+
+    const now = new Date().toISOString();
+    const updatedDocuments = updateDocumentSection(currentDocuments, parsed.section, content, "regenerated", now);
+    const updatedProject = {
+      ...project,
+      documents: updatedDocuments,
+      updatedAt: now,
+    };
+
+    await saveProject(updatedProject);
+
+    return NextResponse.json({
+      project: updatedProject,
+      section: parsed.section,
+      content,
+    });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Section regeneration failed" }, { status: 500 });
+  }
 }

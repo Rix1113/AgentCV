@@ -39,3 +39,17 @@ Requirements:
 - Long statement must be 100-150 words.
 - Never invent facts.
 - Use Vajab täpsustamist when needed.`;
+
+export const SECTION_REGENERATION_INSTRUCTIONS = `Regenerate one Estonian application section and return only valid JSON.
+
+Requirements:
+- Produce a fresh, improved variant for the requested section only.
+- Stay grounded in the CV, job ad, and analysis.
+- Keep the same factual constraints as before: never invent facts.
+- Use Vajab täpsustamist when information is missing.
+- Respect the section-specific format:
+  - analysis_summary_et: concise fit summary in Estonian
+  - cv_et: ATS-friendly CV content
+  - motivation_letter_et: 250-400 words
+  - statement_short_et: 50-80 words
+  - statement_long_et: 100-150 words`;

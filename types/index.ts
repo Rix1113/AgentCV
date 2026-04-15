@@ -1,5 +1,28 @@
 export type FitScoreBand = "low" | "medium" | "high";
 
+export const DOCUMENT_SECTION_KEYS = [
+  "analysis_summary_et",
+  "cv_et",
+  "motivation_letter_et",
+  "statement_short_et",
+  "statement_long_et",
+] as const;
+
+export type DocumentSectionKey = (typeof DOCUMENT_SECTION_KEYS)[number];
+
+export type DocumentVersionSource =
+  | "initial_generation"
+  | "regenerated"
+  | "manual_edit"
+  | "restored";
+
+export type DocumentVersion = {
+  id: string;
+  content: string;
+  createdAt: string;
+  source: DocumentVersionSource;
+};
+
 export type AnalysisResult = {
   target_role: string;
   employer_name: string;
@@ -15,12 +38,10 @@ export type AnalysisResult = {
   fit_score_band: FitScoreBand;
 };
 
-export type GeneratedDocuments = {
-  analysis_summary_et: string;
-  cv_et: string;
-  motivation_letter_et: string;
-  statement_short_et: string;
-  statement_long_et: string;
+export type GeneratedDocuments = Record<DocumentSectionKey, string>;
+
+export type StoredDocuments = GeneratedDocuments & {
+  _history?: Partial<Record<DocumentSectionKey, DocumentVersion[]>>;
 };
 
 export type Project = {
@@ -30,7 +51,7 @@ export type Project = {
   cvText: string;
   jobAdText: string;
   analysis?: AnalysisResult;
-  documents?: GeneratedDocuments;
+  documents?: StoredDocuments;
   createdAt: string;
   updatedAt: string;
 };
