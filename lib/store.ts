@@ -1,5 +1,10 @@
 import type { Project } from "@/types";
-import { hasSupabasePersistence, supabaseServiceRoleKey, supabaseUrl } from "@/lib/supabase/config";
+import {
+  hasSupabasePersistence,
+  supabaseAnonKey,
+  supabaseServiceRoleKey,
+  supabaseUrl,
+} from "@/lib/supabase/config";
 
 const memoryStore = new Map<string, Project>();
 
@@ -57,7 +62,7 @@ async function supabaseRequest(path: string, init?: RequestInit) {
 
   if (!response.ok) {
     const details = await response.text();
-    throw new Error(`Supabase request failed (${response.status}): ${details}`);
+    throw new Error(formatSupabaseError(response.status, details, init?.method));
   }
 
   if (response.status === 204) {
@@ -65,6 +70,40 @@ async function supabaseRequest(path: string, init?: RequestInit) {
   }
 
   return response.json();
+}
+
+function formatSupabaseError(status: number, details: string, method?: string) {
+  const baseMessage = `Supabase request failed (${status}): ${details}`;
+  const normalizedMethod = (method ?? "GET").toUpperCase();
+  const isWrite = normalizedMethod !== "GET" && normalizedMethod !== "HEAD";
+  const serviceKeyMatchesAnon = Boolean(
+    supabaseServiceRoleKey &&
+      supabaseAnonKey &&
+      supabaseServiceRoleKey.trim() === supabaseAnonKey.trim()
+  );
+
+  try {
+    const payload = JSON.parse(details) as { code?: string; message?: string };
+    const rowLevelSecurityFailure =
+      status === 401 &&
+      payload.code === "42501" &&
+      payload.message?.includes("row-level security policy");
+
+    if (isWrite && rowLevelSecurityFailure) {
+      return [
+        "Supabase write failed because the app is not using a real service-role key.",
+        "Check SUPABASE_SERVICE_ROLE_KEY in .env.local and make sure it is the secret service_role key, not the public anon key.",
+        serviceKeyMatchesAnon ? "Right now SUPABASE_SERVICE_ROLE_KEY appears to match NEXT_PUBLIC_SUPABASE_ANON_KEY." : null,
+        `Original Supabase error (${status}/${payload.code}): ${payload.message}`,
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+  } catch {
+    return baseMessage;
+  }
+
+  return baseMessage;
 }
 
 export async function listProjects(userId: string): Promise<Project[]> {
