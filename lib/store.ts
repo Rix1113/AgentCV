@@ -1,4 +1,4 @@
-import type { Project, UsageEvent, UsageEventType } from "@/types";
+import type { Project, UsageEvent, UsageEventType, UserPlanProfile } from "@/types";
 import {
   hasSupabasePersistence,
   supabaseAnonKey,
@@ -8,6 +8,7 @@ import {
 
 const memoryStore = new Map<string, Project>();
 const memoryUsageEvents: UsageEvent[] = [];
+const memoryUserPlanProfiles = new Map<string, UserPlanProfile>();
 
 type SupabaseProjectRow = {
   id: string;
@@ -29,6 +30,14 @@ type SupabaseUsageEventRow = {
   project_id: string | null;
   metadata: UsageEvent["metadata"] | null;
   created_at: string;
+};
+
+type SupabaseUserPlanProfileRow = {
+  user_id: string;
+  email: string | null;
+  plan: UserPlanProfile["plan"];
+  created_at: string;
+  updated_at: string;
 };
 
 function rowToProject(row: SupabaseProjectRow): Project {
@@ -80,6 +89,26 @@ function usageEventToSupabaseRow(event: UsageEvent) {
     project_id: event.projectId ?? null,
     metadata: event.metadata ?? null,
     created_at: event.createdAt,
+  };
+}
+
+function rowToUserPlanProfile(row: SupabaseUserPlanProfileRow): UserPlanProfile {
+  return {
+    userId: row.user_id,
+    email: row.email,
+    plan: row.plan,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function userPlanProfileToSupabaseRow(profile: UserPlanProfile) {
+  return {
+    user_id: profile.userId,
+    email: profile.email,
+    plan: profile.plan,
+    created_at: profile.createdAt,
+    updated_at: profile.updatedAt,
   };
 }
 
@@ -251,4 +280,34 @@ export async function listUsageEventsForUser(
   const rows = (await supabaseRequest(`usage_events?${filters}`)) as SupabaseUsageEventRow[];
 
   return rows.map(rowToUsageEvent);
+}
+
+export async function getUserPlanProfile(userId: string): Promise<UserPlanProfile | undefined> {
+  if (!hasSupabasePersistence) {
+    return memoryUserPlanProfiles.get(userId);
+  }
+
+  const rows = (await supabaseRequest(
+    `user_profiles?select=user_id,email,plan,created_at,updated_at&user_id=eq.${encodeURIComponent(userId)}&limit=1`
+  )) as SupabaseUserPlanProfileRow[];
+
+  const row = rows[0];
+  return row ? rowToUserPlanProfile(row) : undefined;
+}
+
+export async function saveUserPlanProfile(profile: UserPlanProfile): Promise<UserPlanProfile> {
+  if (!hasSupabasePersistence) {
+    memoryUserPlanProfiles.set(profile.userId, profile);
+    return profile;
+  }
+
+  const rows = (await supabaseRequest("user_profiles?on_conflict=user_id", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: JSON.stringify(userPlanProfileToSupabaseRow(profile)),
+  })) as SupabaseUserPlanProfileRow[];
+
+  return rowToUserPlanProfile(rows[0]);
 }

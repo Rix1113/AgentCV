@@ -24,7 +24,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for Supabase Auth
 4. Add `SUPABASE_SERVICE_ROLE_KEY` if you want project persistence in Supabase Postgres
 5. Add `ADMIN_EMAILS` as a comma-separated allowlist for the `/admin` analytics page, for example `ADMIN_EMAILS=founder@example.com,ops@example.com`
-6. Optionally add `PRO_PLAN_EMAILS` as a comma-separated allowlist for users who should get higher generation/export limits
+6. Optionally add `PRO_PLAN_EMAILS` as a comma-separated fallback allowlist for users who should start on the `pro` plan before you manage plans in Supabase
 7. Optionally tune plan limits with `PLAN_FREE_*` and `PLAN_PRO_*` env vars
 8. Install dependencies:
    npm install
@@ -45,13 +45,17 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
   `id (text, pk)`, `user_id (uuid or text, nullable)`, `event_type (text)`,
   `route (text, nullable)`, `project_id (text, nullable)`, `metadata (jsonb, nullable)`,
   `created_at (timestamptz)`.
+- Ensure a `user_profiles` table exists in Supabase with columns:
+  `user_id (uuid or text, pk)`, `email (text, nullable)`, `plan (text)`,
+  `created_at (timestamptz)`, `updated_at (timestamptz)`.
 - Every project is now scoped to the authenticated Supabase user through `user_id`.
-- Usage events fall back to in-memory storage when `SUPABASE_SERVICE_ROLE_KEY` is missing, just like projects.
+- Usage events and user plan profiles fall back to in-memory storage when `SUPABASE_SERVICE_ROLE_KEY` is missing, just like projects.
+- Plan resolution now prefers `user_profiles.plan` and lazily creates a row for each signed-in user when plan-aware pages or APIs are used.
 - The `documents` JSON now also stores per-section version history under `_history`, so no extra database column is required.
 - Billing is still a scaffold-level placeholder, but generation/export endpoints now enforce plan-aware daily caps and rate windows server-side.
 - Dashboard and settings now show the active plan plus remaining daily generation/export quota for the signed-in user.
 - `ADMIN_EMAILS` users are treated as the `admin` plan with effectively unlimited generation/export access.
-- `PRO_PLAN_EMAILS` users are treated as the `pro` plan; everyone else defaults to `free`.
+- `PRO_PLAN_EMAILS` remains a fallback for bootstrapping `pro` users; once a `user_profiles` row exists, that stored plan becomes the source of truth for non-admin users.
 - Supported limit env vars are:
   `PLAN_FREE_DAILY_GENERATIONS`, `PLAN_FREE_DAILY_EXPORTS`,
   `PLAN_FREE_GENERATION_RATE_MAX`, `PLAN_FREE_GENERATION_RATE_WINDOW_MS`,
@@ -59,3 +63,6 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
   `PLAN_PRO_DAILY_GENERATIONS`, `PLAN_PRO_DAILY_EXPORTS`,
   `PLAN_PRO_GENERATION_RATE_MAX`, `PLAN_PRO_GENERATION_RATE_WINDOW_MS`,
   `PLAN_PRO_EXPORT_RATE_MAX`, `PLAN_PRO_EXPORT_RATE_WINDOW_MS`.
+
+## Suggested next steps
+- Add an admin settings screen to view users and change `user_profiles.plan` without editing Supabase rows manually.

@@ -108,3 +108,11 @@ export type PlanUsageSummary = {
     remaining: number | null;
   };
 };
+
+export type UserPlanProfile = {
+  userId: string;
+  email: string | null;
+  plan: Exclude<PlanTier, "admin">;
+  createdAt: string;
+  updatedAt: string;
+};

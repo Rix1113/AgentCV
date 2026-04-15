@@ -1,6 +1,6 @@
 import { isAdminEmail } from "@/lib/auth";
-import { listUsageEventsForUser } from "@/lib/store";
-import type { PlanTier, PlanUsageSummary, UsageEventType } from "@/types";
+import { getUserPlanProfile, listUsageEventsForUser, saveUserPlanProfile } from "@/lib/store";
+import type { PlanTier, PlanUsageSummary, UsageEventType, UserPlanProfile } from "@/types";
 
 type LimitedAction = "generation" | "export";
 
@@ -38,6 +38,7 @@ type PlanAllowanceResult =
 
 const GENERATION_EVENT_TYPES: UsageEventType[] = ["documents_generated", "section_regenerated"];
 const EXPORT_EVENT_TYPES: UsageEventType[] = ["exported_pdf", "exported_docx"];
+let hasLoggedPlanFallbackWarning = false;
 
 const DEFAULT_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
@@ -62,22 +63,29 @@ const DEFAULT_LIMITS: Record<PlanTier, PlanLimits> = {
 
 const proPlanEmails = parseEmailList(process.env.PRO_PLAN_EMAILS);
 
-export function getUserPlan(userEmail?: string | null): PlanTier {
+export async function getUserPlan(userId: string, userEmail?: string | null): Promise<PlanTier> {
   const normalizedEmail = userEmail?.trim().toLowerCase();
 
   if (isAdminEmail(normalizedEmail)) {
     return "admin";
   }
 
-  if (normalizedEmail && proPlanEmails.has(normalizedEmail)) {
-    return "pro";
-  }
+  const fallbackPlan = getFallbackUserPlan(normalizedEmail);
 
-  return "free";
+  try {
+    const profile = await ensureUserPlanProfile(userId, normalizedEmail, fallbackPlan);
+    return profile.plan;
+  } catch (error) {
+    if (!hasLoggedPlanFallbackWarning) {
+      hasLoggedPlanFallbackWarning = true;
+      console.error("Failed to resolve user plan from user_profiles, falling back to env allowlists.", error);
+    }
+    return fallbackPlan;
+  }
 }
 
 export async function assertPlanAllowance(input: PlanAllowanceInput): Promise<PlanAllowanceResult> {
-  const plan = getUserPlan(input.userEmail);
+  const plan = await getUserPlan(input.userId, input.userEmail);
   const limits = getPlanLimits(plan);
 
   if (plan === "admin") {
@@ -166,7 +174,7 @@ function getPlanLimits(plan: PlanTier): PlanLimits {
 }
 
 export async function getPlanUsageSummary(userId: string, userEmail?: string | null): Promise<PlanUsageSummary> {
-  const plan = getUserPlan(userEmail);
+  const plan = await getUserPlan(userId, userEmail);
   const limits = getPlanLimits(plan);
   const now = Date.now();
   const dayStartIso = getUtcDayStart(now).toISOString();
@@ -183,6 +191,44 @@ export async function getPlanUsageSummary(userId: string, userEmail?: string | n
     generations: summarizeUsage(generationCount, limits.dailyGenerations),
     exports: summarizeUsage(exportCount, limits.dailyExports),
   };
+}
+
+function getFallbackUserPlan(userEmail?: string | null): Exclude<PlanTier, "admin"> {
+  if (userEmail && proPlanEmails.has(userEmail)) {
+    return "pro";
+  }
+
+  return "free";
+}
+
+async function ensureUserPlanProfile(
+  userId: string,
+  userEmail: string | null | undefined,
+  fallbackPlan: Exclude<PlanTier, "admin">
+): Promise<UserPlanProfile> {
+  const existing = await getUserPlanProfile(userId);
+
+  if (existing) {
+    if (existing.email === userEmail || userEmail === undefined) {
+      return existing;
+    }
+
+    const updatedProfile: UserPlanProfile = {
+      ...existing,
+      email: userEmail ?? null,
+      updatedAt: new Date().toISOString(),
+    };
+    return saveUserPlanProfile(updatedProfile);
+  }
+
+  const now = new Date().toISOString();
+  return saveUserPlanProfile({
+    userId,
+    email: userEmail ?? null,
+    plan: fallbackPlan,
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 function parseEmailList(value?: string) {
