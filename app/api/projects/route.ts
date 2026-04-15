@@ -6,6 +6,7 @@ import { projectInputSchema, updateProjectDocumentsSchema } from "@/lib/validato
 import { makeId } from "@/lib/utils";
 import { DOCUMENT_SECTION_KEYS } from "@/types";
 import { getProject, listProjects, saveProject } from "@/lib/store";
+import { recordUsageEvent } from "@/lib/usage";
 
 export async function GET() {
   const { error, user } = await requireApiUser();
@@ -36,6 +37,18 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     };
     await saveProject(project);
+    await recordUsageEvent({
+      userId: user.id,
+      userEmail: user.email,
+      eventType: "project_created",
+      route: request.nextUrl.pathname,
+      projectId: project.id,
+      metadata: {
+        method: request.method,
+        pathname: request.nextUrl.pathname,
+        projectTitle: project.title,
+      },
+    });
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
     const message =
@@ -84,6 +97,22 @@ export async function PATCH(request: NextRequest) {
       updatedAt: now,
     };
     await saveProject(updated);
+    const changedSections = DOCUMENT_SECTION_KEYS.filter(
+      (section) => existing.documents?.[section] !== nextDocuments[section]
+    );
+    await recordUsageEvent({
+      userId: user.id,
+      userEmail: user.email,
+      eventType: "project_documents_updated",
+      route: request.nextUrl.pathname,
+      projectId: updated.id,
+      metadata: {
+        method: request.method,
+        pathname: request.nextUrl.pathname,
+        changedSections,
+        sources: parsed.changeSources,
+      },
+    });
     return NextResponse.json(updated);
   } catch (error) {
     const message =

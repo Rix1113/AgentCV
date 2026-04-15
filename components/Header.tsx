@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isAdminEmail } from "@/lib/auth";
 import { AuthStatus } from "@/components/AuthStatus";
 
 export async function Header() {
   const user = await getCurrentUser().catch(() => null);
+  const isAdmin = isAdminEmail(user?.email);
 
   return (
     <header className="border-b border-border/80 bg-black/20">
@@ -14,6 +15,7 @@ export async function Header() {
             <Link href="/dashboard">Dashboard</Link>
             <Link href="/history">History</Link>
             <Link href="/settings">Settings</Link>
+            {isAdmin ? <Link href="/admin">Admin</Link> : null}
             {!user ? <Link href="/auth">Sign in</Link> : null}
           </nav>
           <AuthStatus email={user?.email} />

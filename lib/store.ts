@@ -1,4 +1,4 @@
-import type { Project } from "@/types";
+import type { Project, UsageEvent, UsageEventType } from "@/types";
 import {
   hasSupabasePersistence,
   supabaseAnonKey,
@@ -7,6 +7,7 @@ import {
 } from "@/lib/supabase/config";
 
 const memoryStore = new Map<string, Project>();
+const memoryUsageEvents: UsageEvent[] = [];
 
 type SupabaseProjectRow = {
   id: string;
@@ -18,6 +19,16 @@ type SupabaseProjectRow = {
   documents: Project["documents"] | null;
   created_at: string;
   updated_at: string;
+};
+
+type SupabaseUsageEventRow = {
+  id: string;
+  user_id: string | null;
+  event_type: UsageEventType;
+  route: string | null;
+  project_id: string | null;
+  metadata: UsageEvent["metadata"] | null;
+  created_at: string;
 };
 
 function rowToProject(row: SupabaseProjectRow): Project {
@@ -45,6 +56,30 @@ function projectToSupabaseRow(project: Project) {
     documents: project.documents ?? null,
     created_at: project.createdAt,
     updated_at: project.updatedAt,
+  };
+}
+
+function rowToUsageEvent(row: SupabaseUsageEventRow): UsageEvent {
+  return {
+    id: row.id,
+    userId: row.user_id ?? undefined,
+    eventType: row.event_type,
+    route: row.route ?? undefined,
+    projectId: row.project_id ?? undefined,
+    metadata: row.metadata ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+function usageEventToSupabaseRow(event: UsageEvent) {
+  return {
+    id: event.id,
+    user_id: event.userId ?? null,
+    event_type: event.eventType,
+    route: event.route ?? null,
+    project_id: event.projectId ?? null,
+    metadata: event.metadata ?? null,
+    created_at: event.createdAt,
   };
 }
 
@@ -158,4 +193,35 @@ export async function saveProject(project: Project): Promise<Project> {
     body: JSON.stringify(projectToSupabaseRow(project)),
   });
   return project;
+}
+
+export async function createUsageEvent(event: UsageEvent): Promise<UsageEvent> {
+  if (!hasSupabasePersistence) {
+    memoryUsageEvents.unshift(event);
+    return event;
+  }
+
+  await supabaseRequest("usage_events", {
+    method: "POST",
+    headers: {
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify(usageEventToSupabaseRow(event)),
+  });
+
+  return event;
+}
+
+export async function listUsageEvents(limit = 250): Promise<UsageEvent[]> {
+  if (!hasSupabasePersistence) {
+    return [...memoryUsageEvents]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  const rows = (await supabaseRequest(
+    `usage_events?select=id,user_id,event_type,route,project_id,metadata,created_at&order=created_at.desc&limit=${Math.max(1, limit)}`
+  )) as SupabaseUsageEventRow[];
+
+  return rows.map(rowToUsageEvent);
 }

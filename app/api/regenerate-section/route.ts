@@ -5,6 +5,7 @@ import { normalizeStoredDocuments, updateDocumentSection } from "@/lib/documents
 import { getProject, saveProject } from "@/lib/store";
 import { regenerateSectionSchema } from "@/lib/validators/input";
 import { normalizeText } from "@/lib/parsers/text";
+import { recordUsageEvent } from "@/lib/usage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +40,18 @@ export async function POST(request: NextRequest) {
     };
 
     await saveProject(updatedProject);
+    await recordUsageEvent({
+      userId: user.id,
+      userEmail: user.email,
+      eventType: "section_regenerated",
+      route: request.nextUrl.pathname,
+      projectId: updatedProject.id,
+      metadata: {
+        method: request.method,
+        pathname: request.nextUrl.pathname,
+        section: parsed.section,
+      },
+    });
 
     return NextResponse.json({
       project: updatedProject,

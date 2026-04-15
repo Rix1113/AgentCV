@@ -55,3 +55,39 @@ export type Project = {
   createdAt: string;
   updatedAt: string;
 };
+
+export const USAGE_EVENT_TYPES = [
+  "page_view",
+  "project_created",
+  "project_documents_updated",
+  "analysis_generated",
+  "documents_generated",
+  "section_regenerated",
+  "exported_pdf",
+  "exported_docx",
+  "admin_analytics_viewed",
+] as const;
+
+export type UsageEventType = (typeof USAGE_EVENT_TYPES)[number];
+
+export type UsageEventMetadata = {
+  method?: string;
+  pathname?: string;
+  userEmail?: string | null;
+  section?: DocumentSectionKey;
+  exportFormat?: "pdf" | "docx";
+  fitScoreBand?: FitScoreBand;
+  projectTitle?: string;
+  changedSections?: DocumentSectionKey[];
+  sources?: Partial<Record<DocumentSectionKey, DocumentVersionSource>>;
+};
+
+export type UsageEvent = {
+  id: string;
+  userId?: string;
+  eventType: UsageEventType;
+  route?: string;
+  projectId?: string;
+  metadata?: UsageEventMetadata;
+  createdAt: string;
+};
