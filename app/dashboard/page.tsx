@@ -5,7 +5,7 @@ import { getProject } from "@/lib/store";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ projectId?: string }> }) {
   const params = await searchParams;
-  const project = params.projectId ? getProject(params.projectId) : undefined;
+  const project = params.projectId ? await getProject(params.projectId) : undefined;
 
   return (
     <main>

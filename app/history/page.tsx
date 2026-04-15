@@ -2,8 +2,8 @@ import { Header } from "@/components/Header";
 import { ProjectList } from "@/components/ProjectList";
 import { listProjects } from "@/lib/store";
 
-export default function HistoryPage() {
-  const projects = listProjects();
+export default async function HistoryPage() {
+  const projects = await listProjects();
   return (
     <main>
       <Header />

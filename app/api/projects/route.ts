@@ -4,7 +4,7 @@ import { makeId } from "@/lib/utils";
 import { getProject, listProjects, saveProject } from "@/lib/store";
 
 export async function GET() {
-  return NextResponse.json({ projects: listProjects() });
+  return NextResponse.json({ projects: await listProjects() });
 }
 
 export async function POST(request: NextRequest) {
@@ -19,13 +19,13 @@ export async function POST(request: NextRequest) {
     createdAt: now,
     updatedAt: now,
   };
-  saveProject(project);
+  await saveProject(project);
   return NextResponse.json(project, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
   const body = await request.json();
-  const existing = getProject(body.projectId);
+  const existing = await getProject(body.projectId);
   if (!existing) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
@@ -35,6 +35,6 @@ export async function PATCH(request: NextRequest) {
     documents: body.documents ?? existing.documents,
     updatedAt: new Date().toISOString(),
   };
-  saveProject(updated);
+  await saveProject(updated);
   return NextResponse.json(updated);
 }

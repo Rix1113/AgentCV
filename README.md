@@ -20,19 +20,23 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 ## Quick start
 1. Copy `.env.example` to `.env.local`
 2. Add `OPENAI_API_KEY`
-3. Install dependencies:
+3. (Optional) Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for persistent storage in Supabase Postgres
+4. Install dependencies:
    npm install
-4. Start dev server:
+5. Start dev server:
    npm run dev
 
 ## Notes
-- Current persistence is in-memory and should be replaced with a database.
+- Supabase Postgres persistence is enabled automatically when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set.
+- If Supabase env vars are not set, the app falls back to in-memory storage.
+- Ensure a `projects` table exists in Supabase with columns:
+  `id (text, pk)`, `title (text)`, `cv_text (text)`, `job_ad_text (text)`,
+  `analysis (jsonb)`, `documents (jsonb)`, `created_at (timestamptz)`, `updated_at (timestamptz)`.
 - File upload parsing is not yet wired in.
 - Auth, billing, and production storage are scaffold-level placeholders.
 - Single-section regeneration endpoint is a placeholder for the next iteration.
 
 ## Suggested next steps
-- Add Supabase or Postgres persistence
 - Add Clerk or Supabase Auth
 - Add file upload and parsing for PDF/DOCX
 - Implement per-section regeneration and version history

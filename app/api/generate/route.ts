@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const documents = await generateDocuments(normalizeText(body.cvText), normalizeText(body.jobAdText), body.analysis);
-    const project = getProject(body.projectId);
+    const project = await getProject(body.projectId);
     if (project) {
-      saveProject({ ...project, documents, updatedAt: new Date().toISOString() });
+      await saveProject({ ...project, documents, updatedAt: new Date().toISOString() });
     }
     return NextResponse.json({ documents });
   } catch (error) {
