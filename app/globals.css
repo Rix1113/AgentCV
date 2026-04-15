@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-background text-white antialiased;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.card {
+  @apply rounded-2xl border border-border bg-surface/70 shadow-lg shadow-black/20;
+}
+
+.input {
+  @apply w-full rounded-xl border border-border bg-black/20 px-4 py-3 text-sm text-white outline-none transition focus:border-accent;
+}
+
+.textarea {
+  @apply min-h-56 w-full rounded-xl border border-border bg-black/20 px-4 py-3 text-sm text-white outline-none transition focus:border-accent;
+}
+
+.button-primary {
+  @apply inline-flex items-center justify-center rounded-xl bg-accent px-4 py-2 font-semibold text-slate-900 transition hover:opacity-90;
+}
+
+.button-secondary {
+  @apply inline-flex items-center justify-center rounded-xl border border-border px-4 py-2 font-semibold text-white transition hover:bg-white/5;
+}
