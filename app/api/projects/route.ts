@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { requireApiUser } from "@/lib/auth";
 import { normalizeStoredDocuments, updateDocumentSection } from "@/lib/documents";
 import { projectInputSchema, updateProjectDocumentsSchema } from "@/lib/validators/input";
@@ -16,25 +17,36 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { error, user } = await requireApiUser();
-  if (error) {
-    return error;
-  }
+  try {
+    const { error, user } = await requireApiUser();
+    if (error) {
+      return error;
+    }
 
-  const body = await request.json();
-  const parsed = projectInputSchema.parse(body);
-  const now = new Date().toISOString();
-  const project = {
-    id: makeId("proj"),
-    userId: user.id,
-    title: parsed.title,
-    cvText: parsed.cvText,
-    jobAdText: parsed.jobAdText,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await saveProject(project);
-  return NextResponse.json(project, { status: 201 });
+    const body = await request.json();
+    const parsed = projectInputSchema.parse(body);
+    const now = new Date().toISOString();
+    const project = {
+      id: makeId("proj"),
+      userId: user.id,
+      title: parsed.title,
+      cvText: parsed.cvText,
+      jobAdText: parsed.jobAdText,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await saveProject(project);
+    return NextResponse.json(project, { status: 201 });
+  } catch (error) {
+    const message =
+      error instanceof ZodError
+        ? error.issues.map((issue) => issue.message).join(", ")
+        : error instanceof Error
+          ? error.message
+          : "Unable to create project";
+
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }
 
 export async function PATCH(request: NextRequest) {
@@ -74,6 +86,13 @@ export async function PATCH(request: NextRequest) {
     await saveProject(updated);
     return NextResponse.json(updated);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update project" }, { status: 400 });
+    const message =
+      error instanceof ZodError
+        ? error.issues.map((issue) => issue.message).join(", ")
+        : error instanceof Error
+          ? error.message
+          : "Unable to update project";
+
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

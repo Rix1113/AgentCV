@@ -15,6 +15,15 @@ export function ProjectForm() {
   const cvFileInputRef = useRef<HTMLInputElement | null>(null);
   const jobAdFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  async function readError(response: Response, fallback: string) {
+    try {
+      const payload = await response.json();
+      return payload.error ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -27,7 +36,7 @@ export function ProjectForm() {
         body: JSON.stringify({ title, cvText, jobAdText }),
       });
 
-      if (!projectRes.ok) throw new Error("Failed to create project");
+      if (!projectRes.ok) throw new Error(await readError(projectRes, "Failed to create project"));
       const project = await projectRes.json();
 
       const analyzeRes = await fetch("/api/analyze", {
@@ -35,7 +44,7 @@ export function ProjectForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: project.id, cvText, jobAdText }),
       });
-      if (!analyzeRes.ok) throw new Error("Analysis failed");
+      if (!analyzeRes.ok) throw new Error(await readError(analyzeRes, "Analysis failed"));
       const { analysis } = await analyzeRes.json();
 
       const generateRes = await fetch("/api/generate", {
@@ -43,7 +52,7 @@ export function ProjectForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: project.id, cvText, jobAdText, analysis }),
       });
-      if (!generateRes.ok) throw new Error("Generation failed");
+      if (!generateRes.ok) throw new Error(await readError(generateRes, "Generation failed"));
 
       router.push(`/dashboard?projectId=${project.id}`);
       router.refresh();
