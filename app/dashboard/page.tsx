@@ -1,11 +1,13 @@
 import { Header } from "@/components/Header";
 import { ProjectForm } from "@/components/ProjectForm";
 import { ResultsWorkspace } from "@/components/ResultsWorkspace";
+import { requireUser } from "@/lib/auth";
 import { getProject } from "@/lib/store";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ projectId?: string }> }) {
+  const user = await requireUser();
   const params = await searchParams;
-  const project = params.projectId ? await getProject(params.projectId) : undefined;
+  const project = params.projectId ? await getProject(params.projectId, user.id) : undefined;
 
   return (
     <main>

@@ -8,7 +8,8 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Analysis and generation API routes
 - OpenAI-backed prompt pipeline
 - DOCX and PDF export routes
-- In-memory project storage placeholder
+- Supabase Auth-ready account flow
+- In-memory or Supabase-backed project storage
 
 ## Outputs
 - Analüüs ja sobivuse kokkuvõte
@@ -20,24 +21,29 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 ## Quick start
 1. Copy `.env.example` to `.env.local`
 2. Add `OPENAI_API_KEY`
-3. (Optional) Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for persistent storage in Supabase Postgres
-4. Install dependencies:
+3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for Supabase Auth
+4. Add `SUPABASE_SERVICE_ROLE_KEY` if you want project persistence in Supabase Postgres
+5. Install dependencies:
    npm install
-5. Start dev server:
+6. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`
+7. Start dev server:
    npm run dev
 
 ## Notes
-- Supabase Postgres persistence is enabled automatically when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set.
-- If Supabase env vars are not set, the app falls back to in-memory storage.
+- Supabase Auth is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set.
+- Supabase Postgres persistence is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set.
+- If you skip `SUPABASE_SERVICE_ROLE_KEY`, the app falls back to in-memory project storage after sign-in.
+- If you skip the Supabase Auth env vars, protected pages and APIs will remain unavailable until auth is configured.
 - Ensure a `projects` table exists in Supabase with columns:
-  `id (text, pk)`, `title (text)`, `cv_text (text)`, `job_ad_text (text)`,
-  `analysis (jsonb)`, `documents (jsonb)`, `created_at (timestamptz)`, `updated_at (timestamptz)`.
+  `id (text, pk)`, `user_id (uuid or text)`, `title (text)`, `cv_text (text)`,
+  `job_ad_text (text)`, `analysis (jsonb)`, `documents (jsonb)`,
+  `created_at (timestamptz)`, `updated_at (timestamptz)`.
+- Every project is now scoped to the authenticated Supabase user through `user_id`.
 - File upload parsing is not yet wired in.
-- Auth, billing, and production storage are scaffold-level placeholders.
+- Billing is still a scaffold-level placeholder.
 - Single-section regeneration endpoint is a placeholder for the next iteration.
 
 ## Suggested next steps
-- Add Clerk or Supabase Auth
 - Add file upload and parsing for PDF/DOCX
 - Implement per-section regeneration and version history
 - Add usage logging and admin analytics

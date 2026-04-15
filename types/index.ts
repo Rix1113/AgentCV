@@ -25,6 +25,7 @@ export type GeneratedDocuments = {
 
 export type Project = {
   id: string;
+  userId: string;
   title: string;
   cvText: string;
   jobAdText: string;

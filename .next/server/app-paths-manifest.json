@@ -1,6 +1,14 @@
 {
+  "/api/analyze/route": "app/api/analyze/route.js",
+  "/api/export/pdf/route": "app/api/export/pdf/route.js",
   "/api/projects/route": "app/api/projects/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
+  "/api/export/docx/route": "app/api/export/docx/route.js",
+  "/api/regenerate-section/route": "app/api/regenerate-section/route.js",
+  "/api/generate/route": "app/api/generate/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/history/page": "app/history/page.js",
+  "/settings/page": "app/settings/page.js",
   "/page": "app/page.js",
-  "/history/page": "app/history/page.js"
+  "/dashboard/page": "app/dashboard/page.js"
 }

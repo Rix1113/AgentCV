@@ -1,9 +1,11 @@
 import { Header } from "@/components/Header";
 import { ProjectList } from "@/components/ProjectList";
+import { requireUser } from "@/lib/auth";
 import { listProjects } from "@/lib/store";
 
 export default async function HistoryPage() {
-  const projects = await listProjects();
+  const user = await requireUser();
+  const projects = await listProjects(user.id);
   return (
     <main>
       <Header />
