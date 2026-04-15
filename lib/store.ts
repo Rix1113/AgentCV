@@ -69,7 +69,19 @@ async function supabaseRequest(path: string, init?: RequestInit) {
     return null;
   }
 
-  return response.json();
+  const contentLength = response.headers.get("content-length");
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentLength === "0" || !contentType.includes("application/json")) {
+    return null;
+  }
+
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  return JSON.parse(text);
 }
 
 function formatSupabaseError(status: number, details: string, method?: string) {
