@@ -1,6 +1,6 @@
 import { isAdminEmail } from "@/lib/auth";
 import { listUsageEventsForUser } from "@/lib/store";
-import type { PlanTier, UsageEventType } from "@/types";
+import type { PlanTier, PlanUsageSummary, UsageEventType } from "@/types";
 
 type LimitedAction = "generation" | "export";
 
@@ -165,6 +165,26 @@ function getPlanLimits(plan: PlanTier): PlanLimits {
   };
 }
 
+export async function getPlanUsageSummary(userId: string, userEmail?: string | null): Promise<PlanUsageSummary> {
+  const plan = getUserPlan(userEmail);
+  const limits = getPlanLimits(plan);
+  const now = Date.now();
+  const dayStartIso = getUtcDayStart(now).toISOString();
+  const usageEvents = plan === "admin" ? [] : await listUsageEventsForUser(userId, 500, dayStartIso);
+
+  const generationCount = usageEvents.filter((event) =>
+    GENERATION_EVENT_TYPES.includes(event.eventType)
+  ).length;
+  const exportCount = usageEvents.filter((event) => EXPORT_EVENT_TYPES.includes(event.eventType)).length;
+
+  return {
+    plan,
+    resetsAt: new Date(getNextUtcDayStart(now)).toISOString(),
+    generations: summarizeUsage(generationCount, limits.dailyGenerations),
+    exports: summarizeUsage(exportCount, limits.dailyExports),
+  };
+}
+
 function parseEmailList(value?: string) {
   return new Set(
     (value ?? "")
@@ -172,6 +192,22 @@ function parseEmailList(value?: string) {
       .map((entry) => entry.trim().toLowerCase())
       .filter(Boolean)
   );
+}
+
+function summarizeUsage(used: number, limit: number) {
+  if (!Number.isFinite(limit) || limit >= Number.MAX_SAFE_INTEGER) {
+    return {
+      used,
+      limit: null,
+      remaining: null,
+    };
+  }
+
+  return {
+    used,
+    limit,
+    remaining: Math.max(0, limit - used),
+  };
 }
 
 function readNumberEnv(name: string, fallback: number) {

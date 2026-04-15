@@ -93,3 +93,18 @@ export type UsageEvent = {
 };
 
 export type PlanTier = "free" | "pro" | "admin";
+
+export type PlanUsageSummary = {
+  plan: PlanTier;
+  resetsAt: string;
+  generations: {
+    used: number;
+    limit: number | null;
+    remaining: number | null;
+  };
+  exports: {
+    used: number;
+    limit: number | null;
+    remaining: number | null;
+  };
+};
