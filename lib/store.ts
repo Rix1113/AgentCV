@@ -9,6 +9,7 @@ import {
 const memoryStore = new Map<string, Project>();
 const memoryUsageEvents: UsageEvent[] = [];
 const memoryUserPlanProfiles = new Map<string, UserPlanProfile>();
+let isUserProfilesTableMissing = false;
 
 type SupabaseProjectRow = {
   id: string;
@@ -182,6 +183,14 @@ function formatSupabaseError(status: number, details: string, method?: string) {
   return baseMessage;
 }
 
+function isMissingSupabaseTableError(error: unknown, tableName: string) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.message.includes("PGRST205") && error.message.includes(`'public.${tableName}'`);
+}
+
 export async function listProjects(userId: string): Promise<Project[]> {
   if (!hasSupabasePersistence) {
     return Array.from(memoryStore.values())
@@ -287,12 +296,25 @@ export async function getUserPlanProfile(userId: string): Promise<UserPlanProfil
     return memoryUserPlanProfiles.get(userId);
   }
 
-  const rows = (await supabaseRequest(
-    `user_profiles?select=user_id,email,plan,created_at,updated_at&user_id=eq.${encodeURIComponent(userId)}&limit=1`
-  )) as SupabaseUserPlanProfileRow[];
+  if (isUserProfilesTableMissing) {
+    return memoryUserPlanProfiles.get(userId);
+  }
 
-  const row = rows[0];
-  return row ? rowToUserPlanProfile(row) : undefined;
+  try {
+    const rows = (await supabaseRequest(
+      `user_profiles?select=user_id,email,plan,created_at,updated_at&user_id=eq.${encodeURIComponent(userId)}&limit=1`
+    )) as SupabaseUserPlanProfileRow[];
+
+    const row = rows[0];
+    return row ? rowToUserPlanProfile(row) : undefined;
+  } catch (error) {
+    if (isMissingSupabaseTableError(error, "user_profiles")) {
+      isUserProfilesTableMissing = true;
+      return memoryUserPlanProfiles.get(userId);
+    }
+
+    throw error;
+  }
 }
 
 export async function saveUserPlanProfile(profile: UserPlanProfile): Promise<UserPlanProfile> {
@@ -301,13 +323,28 @@ export async function saveUserPlanProfile(profile: UserPlanProfile): Promise<Use
     return profile;
   }
 
-  const rows = (await supabaseRequest("user_profiles?on_conflict=user_id", {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify(userPlanProfileToSupabaseRow(profile)),
-  })) as SupabaseUserPlanProfileRow[];
+  if (isUserProfilesTableMissing) {
+    memoryUserPlanProfiles.set(profile.userId, profile);
+    return profile;
+  }
 
-  return rowToUserPlanProfile(rows[0]);
+  try {
+    const rows = (await supabaseRequest("user_profiles?on_conflict=user_id", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify(userPlanProfileToSupabaseRow(profile)),
+    })) as SupabaseUserPlanProfileRow[];
+
+    return rowToUserPlanProfile(rows[0]);
+  } catch (error) {
+    if (isMissingSupabaseTableError(error, "user_profiles")) {
+      isUserProfilesTableMissing = true;
+      memoryUserPlanProfiles.set(profile.userId, profile);
+      return profile;
+    }
+
+    throw error;
+  }
 }

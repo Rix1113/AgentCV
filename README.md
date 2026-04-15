@@ -48,6 +48,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Ensure a `user_profiles` table exists in Supabase with columns:
   `user_id (uuid or text, pk)`, `email (text, nullable)`, `plan (text)`,
   `created_at (timestamptz)`, `updated_at (timestamptz)`.
+- If `user_profiles` has not been created yet, the app now falls back gracefully to the existing env-based plan logic instead of failing requests.
 - Every project is now scoped to the authenticated Supabase user through `user_id`.
 - Usage events and user plan profiles fall back to in-memory storage when `SUPABASE_SERVICE_ROLE_KEY` is missing, just like projects.
 - Plan resolution now prefers `user_profiles.plan` and lazily creates a row for each signed-in user when plan-aware pages or APIs are used.
