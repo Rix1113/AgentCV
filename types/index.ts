@@ -91,3 +91,5 @@ export type UsageEvent = {
   metadata?: UsageEventMetadata;
   createdAt: string;
 };
+
+export type PlanTier = "free" | "pro" | "admin";

@@ -1,13 +1,37 @@
 import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { toGeneratedDocuments } from "@/lib/documents";
 import { buildDocx } from "@/lib/exports/docx";
+import { assertPlanAllowance } from "@/lib/plans";
 import { recordUsageEvent } from "@/lib/usage";
 
 export async function POST(request: NextRequest) {
   const { error, user } = await requireApiUser();
   if (error) {
     return error;
+  }
+
+  const allowance = await assertPlanAllowance({
+    userId: user.id,
+    userEmail: user.email,
+    action: "export",
+  });
+  if (!allowance.ok) {
+    return NextResponse.json(
+      {
+        error: allowance.error,
+        code: allowance.code,
+        plan: allowance.plan,
+        retryAfterSeconds: allowance.retryAfterSeconds,
+      },
+      {
+        status: allowance.status,
+        headers: {
+          "Retry-After": String(allowance.retryAfterSeconds),
+        },
+      }
+    );
   }
 
   const body = await request.json();

@@ -225,3 +225,30 @@ export async function listUsageEvents(limit = 250): Promise<UsageEvent[]> {
 
   return rows.map(rowToUsageEvent);
 }
+
+export async function listUsageEventsForUser(
+  userId: string,
+  limit = 250,
+  sinceIso?: string
+): Promise<UsageEvent[]> {
+  if (!hasSupabasePersistence) {
+    return [...memoryUsageEvents]
+      .filter((event) => event.userId === userId && (!sinceIso || event.createdAt >= sinceIso))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  const filters = [
+    "select=id,user_id,event_type,route,project_id,metadata,created_at",
+    `user_id=eq.${encodeURIComponent(userId)}`,
+    sinceIso ? `created_at=gte.${encodeURIComponent(sinceIso)}` : null,
+    "order=created_at.desc",
+    `limit=${Math.max(1, limit)}`,
+  ]
+    .filter(Boolean)
+    .join("&");
+
+  const rows = (await supabaseRequest(`usage_events?${filters}`)) as SupabaseUsageEventRow[];
+
+  return rows.map(rowToUsageEvent);
+}

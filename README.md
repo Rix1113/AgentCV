@@ -24,10 +24,12 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for Supabase Auth
 4. Add `SUPABASE_SERVICE_ROLE_KEY` if you want project persistence in Supabase Postgres
 5. Add `ADMIN_EMAILS` as a comma-separated allowlist for the `/admin` analytics page, for example `ADMIN_EMAILS=founder@example.com,ops@example.com`
-6. Install dependencies:
+6. Optionally add `PRO_PLAN_EMAILS` as a comma-separated allowlist for users who should get higher generation/export limits
+7. Optionally tune plan limits with `PLAN_FREE_*` and `PLAN_PRO_*` env vars
+8. Install dependencies:
    npm install
-7. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`
-8. Start dev server:
+9. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`
+10. Start dev server:
    npm run dev
 
 ## Notes
@@ -46,7 +48,16 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Every project is now scoped to the authenticated Supabase user through `user_id`.
 - Usage events fall back to in-memory storage when `SUPABASE_SERVICE_ROLE_KEY` is missing, just like projects.
 - The `documents` JSON now also stores per-section version history under `_history`, so no extra database column is required.
-- Billing is still a scaffold-level placeholder.
+- Billing is still a scaffold-level placeholder, but generation/export endpoints now enforce plan-aware daily caps and rate windows server-side.
+- `ADMIN_EMAILS` users are treated as the `admin` plan with effectively unlimited generation/export access.
+- `PRO_PLAN_EMAILS` users are treated as the `pro` plan; everyone else defaults to `free`.
+- Supported limit env vars are:
+  `PLAN_FREE_DAILY_GENERATIONS`, `PLAN_FREE_DAILY_EXPORTS`,
+  `PLAN_FREE_GENERATION_RATE_MAX`, `PLAN_FREE_GENERATION_RATE_WINDOW_MS`,
+  `PLAN_FREE_EXPORT_RATE_MAX`, `PLAN_FREE_EXPORT_RATE_WINDOW_MS`,
+  `PLAN_PRO_DAILY_GENERATIONS`, `PLAN_PRO_DAILY_EXPORTS`,
+  `PLAN_PRO_GENERATION_RATE_MAX`, `PLAN_PRO_GENERATION_RATE_WINDOW_MS`,
+  `PLAN_PRO_EXPORT_RATE_MAX`, `PLAN_PRO_EXPORT_RATE_WINDOW_MS`.
 
 ## Suggested next steps
-- Add plan-based limits and rate controls on generation/export endpoints
+- Surface the active plan and remaining quota in the dashboard/settings UI
