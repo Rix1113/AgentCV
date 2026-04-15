@@ -39,11 +39,9 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
   `job_ad_text (text)`, `analysis (jsonb)`, `documents (jsonb)`,
   `created_at (timestamptz)`, `updated_at (timestamptz)`.
 - Every project is now scoped to the authenticated Supabase user through `user_id`.
-- File upload parsing is not yet wired in.
 - Billing is still a scaffold-level placeholder.
 - Single-section regeneration endpoint is a placeholder for the next iteration.
 
 ## Suggested next steps
-- Add file upload and parsing for PDF/DOCX
 - Implement per-section regeneration and version history
 - Add usage logging and admin analytics
