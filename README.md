@@ -49,6 +49,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Usage events fall back to in-memory storage when `SUPABASE_SERVICE_ROLE_KEY` is missing, just like projects.
 - The `documents` JSON now also stores per-section version history under `_history`, so no extra database column is required.
 - Billing is still a scaffold-level placeholder, but generation/export endpoints now enforce plan-aware daily caps and rate windows server-side.
+- Dashboard and settings now show the active plan plus remaining daily generation/export quota for the signed-in user.
 - `ADMIN_EMAILS` users are treated as the `admin` plan with effectively unlimited generation/export access.
 - `PRO_PLAN_EMAILS` users are treated as the `pro` plan; everyone else defaults to `free`.
 - Supported limit env vars are:
@@ -58,6 +59,3 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
   `PLAN_PRO_DAILY_GENERATIONS`, `PLAN_PRO_DAILY_EXPORTS`,
   `PLAN_PRO_GENERATION_RATE_MAX`, `PLAN_PRO_GENERATION_RATE_WINDOW_MS`,
   `PLAN_PRO_EXPORT_RATE_MAX`, `PLAN_PRO_EXPORT_RATE_WINDOW_MS`.
-
-## Suggested next steps
-- Surface the active plan and remaining quota in the dashboard/settings UI
