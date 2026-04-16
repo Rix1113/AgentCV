@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ documents });
   } catch (error) {
+    console.error("/api/generate failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Generation failed" }, { status: 500 });
   }
 }

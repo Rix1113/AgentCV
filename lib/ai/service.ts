@@ -11,6 +11,24 @@ import type { AnalysisResult, DocumentSectionKey, GeneratedDocuments } from "@/t
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 
+function getResponseOutputText(response: any) {
+  if (typeof response.output_text === "string" && response.output_text.trim()) {
+    return response.output_text;
+  }
+
+  if (Array.isArray(response.output) && response.output.length > 0) {
+    const item = response.output[0];
+    if (typeof item === "string") {
+      return item;
+    }
+    if (Array.isArray(item.content)) {
+      return item.content.map((content: any) => content?.text ?? "").join("");
+    }
+  }
+
+  return JSON.stringify(response);
+}
+
 export async function analyzeInputs(cvText: string, jobAdText: string, model?: string): Promise<AnalysisResult> {
   const client = getOpenAIClient();
   const response = await client.responses.create({
@@ -46,8 +64,14 @@ export async function analyzeInputs(cvText: string, jobAdText: string, model?: s
     }
   });
 
-  const raw = response.output_text;
-  return analysisSchema.parse(JSON.parse(raw));
+  const rawOutput = getResponseOutputText(response);
+
+  try {
+    return analysisSchema.parse(JSON.parse(rawOutput));
+  } catch (error) {
+    console.error("Failed to parse analysis response", { rawOutput, response });
+    throw new Error(`Analysis response parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export async function generateDocuments(cvText: string, jobAdText: string, analysis: AnalysisResult, model?: string): Promise<GeneratedDocuments> {
@@ -81,8 +105,14 @@ export async function generateDocuments(cvText: string, jobAdText: string, analy
     }
   });
 
-  const raw = response.output_text;
-  return documentsSchema.parse(JSON.parse(raw));
+  const rawOutput = getResponseOutputText(response);
+
+  try {
+    return documentsSchema.parse(JSON.parse(rawOutput));
+  } catch (error) {
+    console.error("Failed to parse documents response", { rawOutput, response });
+    throw new Error(`Documents response parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export async function regenerateDocumentSection(
@@ -135,10 +165,12 @@ ${jobAdText}`,
     },
   });
 
-  const raw = JSON.parse(response.output_text) as Partial<GeneratedDocuments>;
+  const rawOutput = getResponseOutputText(response);
+  const raw = JSON.parse(rawOutput) as Partial<GeneratedDocuments>;
   const content = raw[section];
 
   if (typeof content !== "string") {
+    console.error("Regenerated section response invalid", { rawOutput, response });
     throw new Error(`Regenerated section ${section} is missing`);
   }
 

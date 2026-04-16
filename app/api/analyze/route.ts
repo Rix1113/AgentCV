@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ analysis });
   } catch (error) {
+    console.error("/api/analyze failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Analysis failed" }, { status: 500 });
   }
 }
