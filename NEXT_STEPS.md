@@ -14,4 +14,4 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 - Admin plan updates now resolve the managed user on the server via a bound action argument plus auth/profile lookup, instead of trusting posted hidden fields.
 - Keep this file updated as tasks are completed or new follow-up work appears.
 
-# Always update README.md and NEXT_STEPS.md
+# Update README.md and NEXT_STEPS.md to document the hardening and mark that follow-up item complete.
