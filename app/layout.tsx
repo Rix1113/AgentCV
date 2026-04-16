@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Estonian Job Agent",
+  title: "CV vastavalt töökuulutusele",
   description: "Generate tailored Estonian CVs, motivation letters, and statements from a CV and job ad.",
 };
 
