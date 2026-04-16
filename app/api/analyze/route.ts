@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const analysis = await analyzeInputs(normalizeText(body.cvText), normalizeText(body.jobAdText));
+    const analysis = await analyzeInputs(normalizeText(body.cvText), normalizeText(body.jobAdText), body.model);
     const project = await getProject(body.projectId, user.id);
     if (project) {
       await saveProject({ ...project, analysis, updatedAt: new Date().toISOString() });

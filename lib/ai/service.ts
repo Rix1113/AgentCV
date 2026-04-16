@@ -9,12 +9,12 @@ import { analysisSchema, documentsSchema } from "@/lib/ai/schemas";
 import { DOCUMENT_SECTION_KEYS } from "@/types";
 import type { AnalysisResult, DocumentSectionKey, GeneratedDocuments } from "@/types";
 
-const MODEL = process.env.OPENAI_MODEL ?? "gpt-5";
+const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 
-export async function analyzeInputs(cvText: string, jobAdText: string): Promise<AnalysisResult> {
+export async function analyzeInputs(cvText: string, jobAdText: string, model?: string): Promise<AnalysisResult> {
   const client = getOpenAIClient();
   const response = await client.responses.create({
-    model: MODEL,
+    model: model ?? MODEL,
     input: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: `${ANALYSIS_INSTRUCTIONS}\n\nCV:\n${cvText}\n\nJOB AD:\n${jobAdText}` },
@@ -50,10 +50,10 @@ export async function analyzeInputs(cvText: string, jobAdText: string): Promise<
   return analysisSchema.parse(JSON.parse(raw));
 }
 
-export async function generateDocuments(cvText: string, jobAdText: string, analysis: AnalysisResult): Promise<GeneratedDocuments> {
+export async function generateDocuments(cvText: string, jobAdText: string, analysis: AnalysisResult, model?: string): Promise<GeneratedDocuments> {
   const client = getOpenAIClient();
   const response = await client.responses.create({
-    model: MODEL,
+    model: model ?? MODEL,
     input: [
       { role: "system", content: SYSTEM_PROMPT },
       {

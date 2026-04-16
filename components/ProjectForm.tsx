@@ -9,6 +9,7 @@ export function ProjectForm() {
   const [title, setTitle] = useState("New Application Project");
   const [cvText, setCvText] = useState("");
   const [jobAdText, setJobAdText] = useState("");
+  const [model, setModel] = useState("gpt-5.4-mini");
   const [loading, setLoading] = useState(false);
   const [uploadingField, setUploadingField] = useState<"cv" | "jobAd" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export function ProjectForm() {
       const analyzeRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, cvText, jobAdText }),
+        body: JSON.stringify({ projectId: project.id, cvText, jobAdText, model }),
       });
       if (!analyzeRes.ok) throw new Error(await readError(analyzeRes, "Analysis failed"));
       const { analysis } = await analyzeRes.json();
@@ -50,7 +51,7 @@ export function ProjectForm() {
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, cvText, jobAdText, analysis }),
+        body: JSON.stringify({ projectId: project.id, cvText, jobAdText, analysis, model }),
       });
       if (!generateRes.ok) throw new Error(await readError(generateRes, "Generation failed"));
 
@@ -149,6 +150,14 @@ export function ProjectForm() {
           />
           <textarea className="textarea" value={jobAdText} onChange={(e) => setJobAdText(e.target.value)} placeholder="Paste job ad here..." />
         </div>
+      </div>
+      <div className="card p-6">
+        <label className="mb-2 block text-sm font-semibold">ChatGPT version</label>
+        <select className="input" value={model} onChange={(e) => setModel(e.target.value)}>
+          <option value="gpt-5.4-mini">GPT-5.4 mini</option>
+          <option value="gpt-5.4">GPT-5.4</option>
+          <option value="gpt-5">GPT-5</option>
+        </select>
       </div>
       <div className="flex items-center gap-3">
         <button className="button-primary" disabled={loading}>{loading ? "Generating..." : "Generate documents"}</button>
