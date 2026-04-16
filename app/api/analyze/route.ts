@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       metadata: {
         method: request.method,
         pathname: request.nextUrl.pathname,
-        fitScoreBand: analysis.fit_score_band,
       },
     });
     return NextResponse.json({ analysis });

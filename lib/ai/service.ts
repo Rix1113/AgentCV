@@ -1,16 +1,27 @@
 import { getOpenAIClient } from "@/lib/ai/client";
 import {
   ANALYSIS_INSTRUCTIONS,
+  buildAnalysisUserPrompt,
+  buildGenerationUserPrompt,
+  buildPreviousOutputsJson,
+  buildSectionRegenerationUserPrompt,
   GENERATION_INSTRUCTIONS,
+  RETRY_APPEND,
   SECTION_REGENERATION_INSTRUCTIONS,
   SYSTEM_PROMPT,
 } from "@/lib/ai/prompts";
-import { analysisSchema, documentsSchema } from "@/lib/ai/schemas";
-import { DOCUMENT_SECTION_KEYS } from "@/types";
+import {
+  analysisResponseJsonSchema,
+  analysisSchema,
+  createSectionRegenerationResponseJsonSchema,
+  documentsSchema,
+  generationResponseJsonSchema,
+} from "@/lib/ai/schemas";
 import type { AnalysisResult, DocumentSectionKey, GeneratedDocuments } from "@/types";
 import type { Response as OpenAIResponse, ResponseOutputItem, ResponseOutputMessage } from "openai/resources/responses/responses";
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
+const MAX_MODEL_ATTEMPTS = 2;
 
 function isOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
   return item.type === "message";
@@ -36,52 +47,54 @@ function getResponseOutputText(response: OpenAIResponse) {
   return JSON.stringify(response);
 }
 
-export async function analyzeInputs(cvText: string, jobAdText: string, model?: string): Promise<AnalysisResult> {
-  const client = getOpenAIClient();
-  const response = await client.responses.create({
-    model: model ?? MODEL,
-    input: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `${ANALYSIS_INSTRUCTIONS}\n\nCV:\n${cvText}\n\nJOB AD:\n${jobAdText}` },
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "analysis",
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            target_role: { type: "string" },
-            employer_name: { type: "string" },
-            candidate_summary: { type: "string" },
-            matched_skills: { type: "array", items: { type: "string" } },
-            transferable_skills: { type: "array", items: { type: "string" } },
-            keyword_targets: { type: "array", items: { type: "string" } },
-            strengths: { type: "array", items: { type: "string" } },
-            weak_points: { type: "array", items: { type: "string" } },
-            missing_information: { type: "array", items: { type: "string" } },
-            relevant_experience_areas: { type: "array", items: { type: "string" } },
-            tone_guidance: { type: "string" },
-            fit_score_band: { type: "string", enum: ["low", "medium", "high"] }
-          },
-          required: ["target_role", "employer_name", "candidate_summary", "matched_skills", "transferable_skills", "keyword_targets", "strengths", "weak_points", "missing_information", "relevant_experience_areas", "tone_guidance", "fit_score_band"]
-        }
-      }
-    }
-  });
-
-  const rawOutput = getResponseOutputText(response);
-
-  try {
-    return analysisSchema.parse(JSON.parse(rawOutput));
-  } catch (error) {
-    console.error("Failed to parse analysis response", { rawOutput, response });
-    throw new Error(`Analysis response parsing failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
+function countWords(value: string) {
+  return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
-export async function generateDocuments(cvText: string, jobAdText: string, analysis: AnalysisResult, model?: string): Promise<GeneratedDocuments> {
+function normalizeForComparison(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function validateGeneratedDocuments(documents: GeneratedDocuments) {
+  const errors: string[] = [];
+  const motivationLetterWords = countWords(documents.motivation_letter_et);
+  const shortStatementWords = countWords(documents.statement_short_et);
+  const longStatementWords = countWords(documents.statement_long_et);
+
+  if (motivationLetterWords < 250 || motivationLetterWords > 400) {
+    errors.push(`motivation_letter_et must be 250-400 words, got ${motivationLetterWords}`);
+  }
+
+  if (shortStatementWords < 50 || shortStatementWords > 80) {
+    errors.push(`statement_short_et must be 50-80 words, got ${shortStatementWords}`);
+  }
+
+  if (longStatementWords < 100 || longStatementWords > 150) {
+    errors.push(`statement_long_et must be 100-150 words, got ${longStatementWords}`);
+  }
+
+  const sectionsToCompare: Array<[DocumentSectionKey, DocumentSectionKey]> = [
+    ["analysis_summary_et", "statement_short_et"],
+    ["analysis_summary_et", "statement_long_et"],
+    ["statement_short_et", "statement_long_et"],
+  ];
+
+  for (const [leftKey, rightKey] of sectionsToCompare) {
+    if (normalizeForComparison(documents[leftKey]) === normalizeForComparison(documents[rightKey])) {
+      errors.push(`${leftKey} duplicates ${rightKey}`);
+    }
+  }
+
+  return errors;
+}
+
+async function createJsonResponse(
+  userContent: string,
+  schemaName: string,
+  schema: object,
+  model?: string,
+  correctionMessage?: string
+) {
   const client = getOpenAIClient();
   const response = await client.responses.create({
     model: model ?? MODEL,
@@ -89,37 +102,94 @@ export async function generateDocuments(cvText: string, jobAdText: string, analy
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `${GENERATION_INSTRUCTIONS}\n\nANALYSIS:\n${JSON.stringify(analysis, null, 2)}\n\nCV:\n${cvText}\n\nJOB AD:\n${jobAdText}`,
+        content: correctionMessage
+          ? `${userContent}\n\n${RETRY_APPEND}\n${correctionMessage}`
+          : userContent,
       },
     ],
     text: {
       format: {
         type: "json_schema",
-        name: "documents",
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            analysis_summary_et: { type: "string" },
-            cv_et: { type: "string" },
-            motivation_letter_et: { type: "string" },
-            statement_short_et: { type: "string" },
-            statement_long_et: { type: "string" }
-          },
-          required: ["analysis_summary_et", "cv_et", "motivation_letter_et", "statement_short_et", "statement_long_et"]
-        }
-      }
-    }
+        name: schemaName,
+        schema,
+      },
+    },
   });
 
-  const rawOutput = getResponseOutputText(response);
+  return getResponseOutputText(response);
+}
 
-  try {
-    return documentsSchema.parse(JSON.parse(rawOutput));
-  } catch (error) {
-    console.error("Failed to parse documents response", { rawOutput, response });
-    throw new Error(`Documents response parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+export async function analyzeInputs(cvText: string, jobAdText: string, model?: string): Promise<AnalysisResult> {
+  const userContent = `${ANALYSIS_INSTRUCTIONS}\n\n${buildAnalysisUserPrompt(cvText, jobAdText)}`;
+  let correctionMessage: string | undefined;
+
+  for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
+    const rawOutput = await createJsonResponse(
+      userContent,
+      "analysis",
+      analysisResponseJsonSchema,
+      model,
+      correctionMessage
+    );
+
+    try {
+      return analysisSchema.parse(JSON.parse(rawOutput));
+    } catch (error) {
+      if (attempt === MAX_MODEL_ATTEMPTS) {
+        console.error("Failed to parse analysis response", { rawOutput });
+        throw new Error(`Analysis response parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
+      correctionMessage = "The previous analysis response did not match the required schema exactly.";
+    }
   }
+
+  throw new Error("Analysis response parsing failed");
+}
+
+export async function generateDocuments(cvText: string, jobAdText: string, analysis: AnalysisResult, model?: string): Promise<GeneratedDocuments> {
+  const userContent = `${GENERATION_INSTRUCTIONS}\n\n${buildGenerationUserPrompt(
+    cvText,
+    jobAdText,
+    JSON.stringify(analysis, null, 2)
+  )}`;
+  let correctionMessage: string | undefined;
+
+  for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
+    const rawOutput = await createJsonResponse(
+      userContent,
+      "documents",
+      generationResponseJsonSchema,
+      model,
+      correctionMessage
+    );
+
+    try {
+      const documents = documentsSchema.parse(JSON.parse(rawOutput));
+      const validationErrors = validateGeneratedDocuments(documents);
+
+      if (validationErrors.length === 0) {
+        return documents;
+      }
+
+      if (attempt === MAX_MODEL_ATTEMPTS) {
+        throw new Error(validationErrors.join("; "));
+      }
+      correctionMessage = validationErrors.join("; ");
+    } catch (error) {
+      if (attempt === MAX_MODEL_ATTEMPTS) {
+        console.error("Failed to parse documents response", { rawOutput });
+        throw new Error(`Documents response parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
+      correctionMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : "The previous documents response failed validation.";
+    }
+  }
+
+  throw new Error("Documents response parsing failed");
 }
 
 export async function regenerateDocumentSection(
@@ -127,59 +197,48 @@ export async function regenerateDocumentSection(
   jobAdText: string,
   analysis: AnalysisResult,
   section: DocumentSectionKey,
-  currentContent: string
+  previousOutputs: GeneratedDocuments
 ): Promise<string> {
-  const client = getOpenAIClient();
-  const response = await client.responses.create({
-    model: MODEL,
-    input: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `${SECTION_REGENERATION_INSTRUCTIONS}
+  const userContent = `${SECTION_REGENERATION_INSTRUCTIONS}\n\n${buildSectionRegenerationUserPrompt(
+    section,
+    cvText,
+    jobAdText,
+    JSON.stringify(analysis, null, 2),
+    buildPreviousOutputsJson(previousOutputs)
+  )}`;
+  let correctionMessage: string | undefined;
 
-SECTION TO REGENERATE: ${section}
+  for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
+    const rawOutput = await createJsonResponse(
+      userContent,
+      "regenerated_section",
+      createSectionRegenerationResponseJsonSchema(section),
+      MODEL,
+      correctionMessage
+    );
 
-ANALYSIS:
-${JSON.stringify(analysis, null, 2)}
+    try {
+      const raw = JSON.parse(rawOutput) as Partial<GeneratedDocuments>;
+      const content = raw[section];
 
-CURRENT SECTION CONTENT:
-${currentContent}
+      if (typeof content !== "string") {
+        throw new Error(`Regenerated section ${section} is missing`);
+      }
 
-CV:
-${cvText}
+      if (Object.keys(raw).length !== 1) {
+        throw new Error(`Regenerated section ${section} response is malformed`);
+      }
 
-JOB AD:
-${jobAdText}`,
-      },
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "regenerated_section",
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: DOCUMENT_SECTION_KEYS.reduce((acc, key) => {
-            if (key === section) {
-              acc[key] = { type: "string" };
-            }
-            return acc;
-          }, {} as Record<string, { type: "string" }>),
-          required: [section],
-        },
-      },
-    },
-  });
+      return content;
+    } catch (error) {
+      if (attempt === MAX_MODEL_ATTEMPTS) {
+        console.error("Regenerated section response invalid", { rawOutput });
+        throw error instanceof Error ? error : new Error(String(error));
+      }
 
-  const rawOutput = getResponseOutputText(response);
-  const raw = JSON.parse(rawOutput) as Partial<GeneratedDocuments>;
-  const content = raw[section];
-
-  if (typeof content !== "string") {
-    console.error("Regenerated section response invalid", { rawOutput, response });
-    throw new Error(`Regenerated section ${section} is missing`);
+      correctionMessage = `Only return the requested key: ${section}.`;
+    }
   }
 
-  return content;
+  throw new Error(`Regenerated section ${section} is missing`);
 }

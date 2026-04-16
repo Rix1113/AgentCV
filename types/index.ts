@@ -1,5 +1,3 @@
-export type FitScoreBand = "low" | "medium" | "high";
-
 export const DOCUMENT_SECTION_KEYS = [
   "analysis_summary_et",
   "cv_et",
@@ -24,18 +22,18 @@ export type DocumentVersion = {
 };
 
 export type AnalysisResult = {
-  target_role: string;
-  employer_name: string;
-  candidate_summary: string;
-  matched_skills: string[];
-  transferable_skills: string[];
-  keyword_targets: string[];
-  strengths: string[];
-  weak_points: string[];
-  missing_information: string[];
+  candidate_profile_summary: string;
+  target_role_summary: string;
+  direct_matches: string[];
+  transferable_matches: string[];
+  job_ad_keywords: string[];
   relevant_experience_areas: string[];
-  tone_guidance: string;
-  fit_score_band: FitScoreBand;
+  evidence_based_strengths: string[];
+  missing_or_unclear_requirements: string[];
+  clarification_points: string[];
+  cv_focus_points: string[];
+  motivation_letter_focus_points: string[];
+  risk_notes: string[];
 };
 
 export type GeneratedDocuments = Record<DocumentSectionKey, string>;
@@ -80,7 +78,6 @@ export type UsageEventMetadata = {
   assignedPlan?: Exclude<PlanTier, "admin">;
   section?: DocumentSectionKey;
   exportFormat?: "pdf" | "docx";
-  fitScoreBand?: FitScoreBand;
   projectTitle?: string;
   changedSections?: DocumentSectionKey[];
   sources?: Partial<Record<DocumentSectionKey, DocumentVersionSource>>;

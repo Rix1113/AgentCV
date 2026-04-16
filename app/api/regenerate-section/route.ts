@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       normalizeText(project.jobAdText || parsed.jobAdText),
       project.analysis,
       parsed.section,
-      currentDocuments[parsed.section]
+      currentDocuments
     );
 
     const now = new Date().toISOString();
