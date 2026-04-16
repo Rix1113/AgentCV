@@ -24,8 +24,6 @@ export function AdminPlanForm({ user, action }: AdminPlanFormProps) {
 
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-3">
-      <input type="hidden" name="userId" value={user.userId} />
-      <input type="hidden" name="email" value={user.email ?? ""} />
       <select
         name="plan"
         defaultValue={user.editablePlan}

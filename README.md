@@ -53,6 +53,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Every project is now scoped to the authenticated Supabase user through `user_id`.
 - Usage events and user plan profiles fall back to in-memory storage when `SUPABASE_SERVICE_ROLE_KEY` is missing, just like projects.
 - Plan resolution now prefers `user_profiles.plan` and lazily creates a row for each signed-in user when plan-aware pages or APIs are used.
+- Admin plan updates now bind the managed user server-side and re-resolve that user from auth/profile data before saving, so the flow never trusts hidden form fields for identity-sensitive values.
 - The `documents` JSON now also stores per-section version history under `_history`, so no extra database column is required.
 - Billing is still a scaffold-level placeholder, but analysis, generation, regeneration, and export endpoints now enforce plan-aware daily caps and rate windows server-side.
 - Analysis requests count against the same generation quota and retry window used for document generation and section regeneration.

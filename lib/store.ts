@@ -498,6 +498,59 @@ export async function listAdminManagedUsers(): Promise<AdminManagedUser[]> {
   return managedUsers.sort(compareAdminManagedUsers);
 }
 
+export async function getAdminManagedUser(userId: string): Promise<AdminManagedUser | undefined> {
+  const profile = await getUserPlanProfile(userId);
+
+  if (!hasSupabasePersistence) {
+    return profile
+      ? buildAdminManagedUser({
+          userId,
+          email: profile.email,
+          createdAt: profile.createdAt,
+          lastSignInAt: null,
+          profile,
+        })
+      : undefined;
+  }
+
+  const adminClient = getSupabaseAdminClient();
+  const { data, error } = await adminClient.auth.admin.getUserById(userId);
+
+  if (error) {
+    if (!profile) {
+      throw error;
+    }
+
+    return buildAdminManagedUser({
+      userId,
+      email: profile.email,
+      createdAt: profile.createdAt,
+      lastSignInAt: null,
+      profile,
+    });
+  }
+
+  if (!data.user) {
+    return profile
+      ? buildAdminManagedUser({
+          userId,
+          email: profile.email,
+          createdAt: profile.createdAt,
+          lastSignInAt: null,
+          profile,
+        })
+      : undefined;
+  }
+
+  return buildAdminManagedUser({
+    userId: data.user.id,
+    email: data.user.email ?? null,
+    createdAt: data.user.created_at ?? null,
+    lastSignInAt: data.user.last_sign_in_at ?? null,
+    profile,
+  });
+}
+
 function buildAdminManagedUser(input: {
   userId: string;
   email: string | null;

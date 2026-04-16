@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isAdminEmail, requireAdminUser } from "@/lib/auth";
-import { getUserPlanProfile, saveUserPlanProfile } from "@/lib/store";
+import { requireAdminUser } from "@/lib/auth";
+import { getAdminManagedUser, getUserPlanProfile, saveUserPlanProfile } from "@/lib/store";
 import { recordUsageEvent } from "@/lib/usage";
 import type { PlanTier, UserPlanProfile } from "@/types";
 
@@ -13,34 +13,38 @@ type ActionState = {
 
 const allowedPlans: Array<Exclude<PlanTier, "admin">> = ["free", "pro"];
 
-export async function updateUserPlanAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateUserPlanAction(
+  managedUserId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
   const adminUser = await requireAdminUser();
-  const userId = readString(formData.get("userId"));
-  const email = readNullableString(formData.get("email"));
   const plan = readString(formData.get("plan"));
-
-  if (!userId) {
-    return { error: "Missing user id." };
-  }
 
   if (!allowedPlans.includes(plan as Exclude<PlanTier, "admin">)) {
     return { error: "Invalid plan." };
   }
 
-  if (isAdminEmail(email)) {
+  const managedUser = await getAdminManagedUser(managedUserId);
+
+  if (!managedUser) {
+    return { error: "Managed user not found." };
+  }
+
+  if (managedUser.isAdmin) {
     return { error: "Admin email accounts are controlled by ADMIN_EMAILS." };
   }
 
   const now = new Date().toISOString();
   const profile: UserPlanProfile = {
-    userId,
-    email,
+    userId: managedUser.userId,
+    email: managedUser.email,
     plan: plan as Exclude<PlanTier, "admin">,
     createdAt: now,
     updatedAt: now,
   };
 
-  const existingProfile = await getUserPlanProfile(userId);
+  const existingProfile = await getUserPlanProfile(managedUser.userId);
   if (existingProfile) {
     profile.createdAt = existingProfile.createdAt;
   }
@@ -54,8 +58,8 @@ export async function updateUserPlanAction(_prevState: ActionState, formData: Fo
     metadata: {
       method: "POST",
       pathname: "/admin",
-      managedUserId: userId,
-      managedUserEmail: email,
+      managedUserId: managedUser.userId,
+      managedUserEmail: managedUser.email,
       assignedPlan: plan as Exclude<PlanTier, "admin">,
     },
   });
@@ -68,9 +72,4 @@ export async function updateUserPlanAction(_prevState: ActionState, formData: Fo
 
 function readString(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function readNullableString(value: FormDataEntryValue | null) {
-  const normalized = readString(value);
-  return normalized ? normalized : null;
 }

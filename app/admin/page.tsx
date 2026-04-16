@@ -85,7 +85,10 @@ export default async function AdminPage() {
                       </td>
                       <td className="py-4 pr-4 text-slate-300">{formatDateTime(managedUser.lastSignInAt)}</td>
                       <td className="py-4">
-                        <AdminPlanForm user={managedUser} action={updateUserPlanAction} />
+                        <AdminPlanForm
+                          user={managedUser}
+                          action={updateUserPlanAction.bind(null, managedUser.userId)}
+                        />
                       </td>
                     </tr>
                   ))
