@@ -23,6 +23,7 @@ export function ResultsWorkspace({ project }: { project: Project }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [exporting, setExporting] = useState<"docx" | "pdf" | null>(null);
   const activeLabel = useMemo(() => tabs.find((tab) => tab.key === activeTab)?.label ?? "Document", [activeTab]);
   const activeHistory = useMemo(() => [...(content._history?.[activeTab] ?? [])].reverse(), [activeTab, content]);
 
@@ -68,18 +69,54 @@ export function ResultsWorkspace({ project }: { project: Project }) {
   }
 
   async function exportFile(kind: "docx" | "pdf") {
-    const res = await fetch(`/api/export/${kind}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documents: content }),
-    });
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `estonian-job-agent.${kind}`;
-    link.click();
-    URL.revokeObjectURL(url);
+    setExporting(kind);
+    setError(null);
+    setStatus(null);
+
+    try {
+      const res = await fetch(`/api/export/${kind}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, documents: content }),
+      });
+      const contentType = res.headers.get("Content-Type") ?? "";
+
+      if (!res.ok) {
+        let message = `Failed to export ${kind.toUpperCase()}.`;
+
+        if (contentType.includes("application/json")) {
+          const payload = (await res.json()) as { error?: string; retryAfterSeconds?: number };
+          message = payload.error ?? message;
+
+          if (typeof payload.retryAfterSeconds === "number" && payload.retryAfterSeconds > 0) {
+            message = `${message} Try again in ${payload.retryAfterSeconds} seconds.`;
+          }
+        } else {
+          const text = await res.text();
+          if (text.trim()) {
+            message = text;
+          }
+        }
+
+        throw new Error(message);
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const filename = disposition.match(/filename=\"([^\"]+)\"/)?.[1] ?? `estonian-job-agent.${kind}`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus(`${kind.toUpperCase()} exported.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to export ${kind.toUpperCase()}.`);
+    } finally {
+      setExporting(null);
+    }
   }
 
   async function regenerateActiveSection() {
@@ -144,14 +181,18 @@ export function ResultsWorkspace({ project }: { project: Project }) {
             </div>
             <div className="card-muted flex flex-wrap gap-3 p-3">
               <button className="button-secondary" onClick={copyCurrent}>Copy</button>
-              <button className="button-secondary" onClick={() => void persistDocuments(content)} disabled={saving || regenerating}>
+              <button className="button-secondary" onClick={() => void persistDocuments(content)} disabled={saving || regenerating || exporting !== null}>
                 {saving ? "Saving..." : "Save"}
               </button>
-              <button className="button-secondary" onClick={() => void regenerateActiveSection()} disabled={saving || regenerating}>
+              <button className="button-secondary" onClick={() => void regenerateActiveSection()} disabled={saving || regenerating || exporting !== null}>
                 {regenerating ? "Regenerating..." : "Regenerate"}
               </button>
-              <button className="button-secondary" onClick={() => exportFile("docx")}>DOCX</button>
-              <button className="button-secondary" onClick={() => exportFile("pdf")}>PDF</button>
+              <button className="button-secondary" onClick={() => void exportFile("docx")} disabled={saving || regenerating || exporting !== null}>
+                {exporting === "docx" ? "Exporting..." : "DOCX"}
+              </button>
+              <button className="button-secondary" onClick={() => void exportFile("pdf")} disabled={saving || regenerating || exporting !== null}>
+                {exporting === "pdf" ? "Exporting..." : "PDF"}
+              </button>
             </div>
           </div>
 
@@ -205,7 +246,7 @@ export function ResultsWorkspace({ project }: { project: Project }) {
                     <p className="mt-1 text-xs text-muted">{new Date(version.createdAt).toLocaleString()}</p>
                   </div>
                   {!isCurrent ? (
-                    <button className="button-secondary px-4 py-2 text-sm" onClick={() => void restoreVersion(version.id)} disabled={saving || regenerating}>
+                    <button className="button-secondary px-4 py-2 text-sm" onClick={() => void restoreVersion(version.id)} disabled={saving || regenerating || exporting !== null}>
                       Restore
                     </button>
                   ) : null}

@@ -57,6 +57,8 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - The `documents` JSON now also stores per-section version history under `_history`, so no extra database column is required.
 - Billing is still a scaffold-level placeholder, but analysis, generation, regeneration, and export endpoints now enforce plan-aware daily caps and rate windows server-side.
 - Analysis requests count against the same generation quota and retry window used for document generation and section regeneration.
+- Export failures now stay inline in the review workspace, so plan/auth/rate-limit JSON errors are shown to the user instead of being downloaded as broken `.pdf` or `.docx` files.
+- Export requests now include `projectId`, which lets PDF and DOCX usage events stay attributed to the originating project.
 - Dashboard and settings now show the active plan plus remaining daily generation/export quota for the signed-in user.
 - `ADMIN_EMAILS` users are treated as the `admin` plan with effectively unlimited analysis/generation/export access.
 - `PRO_PLAN_EMAILS` remains a fallback for bootstrapping `pro` users; once a `user_profiles` row exists, that stored plan becomes the source of truth for non-admin users.
