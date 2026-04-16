@@ -9,6 +9,7 @@ import {
 const memoryStore = new Map<string, Project>();
 const memoryUsageEvents: UsageEvent[] = [];
 const memoryUserPlanProfiles = new Map<string, UserPlanProfile>();
+let isUsageEventsTableMissing = false;
 let isUserProfilesTableMissing = false;
 
 type SupabaseProjectRow = {
@@ -239,13 +240,27 @@ export async function createUsageEvent(event: UsageEvent): Promise<UsageEvent> {
     return event;
   }
 
-  await supabaseRequest("usage_events", {
-    method: "POST",
-    headers: {
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify(usageEventToSupabaseRow(event)),
-  });
+  if (isUsageEventsTableMissing) {
+    memoryUsageEvents.unshift(event);
+    return event;
+  }
+
+  try {
+    await supabaseRequest("usage_events", {
+      method: "POST",
+      headers: {
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(usageEventToSupabaseRow(event)),
+    });
+  } catch (error) {
+    if (isMissingSupabaseTableError(error, "usage_events")) {
+      isUsageEventsTableMissing = true;
+      memoryUsageEvents.unshift(event);
+      return event;
+    }
+    throw error;
+  }
 
   return event;
 }
@@ -257,11 +272,27 @@ export async function listUsageEvents(limit = 250): Promise<UsageEvent[]> {
       .slice(0, limit);
   }
 
-  const rows = (await supabaseRequest(
-    `usage_events?select=id,user_id,event_type,route,project_id,metadata,created_at&order=created_at.desc&limit=${Math.max(1, limit)}`
-  )) as SupabaseUsageEventRow[];
+  if (isUsageEventsTableMissing) {
+    return [...memoryUsageEvents]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
 
-  return rows.map(rowToUsageEvent);
+  try {
+    const rows = (await supabaseRequest(
+      `usage_events?select=id,user_id,event_type,route,project_id,metadata,created_at&order=created_at.desc&limit=${Math.max(1, limit)}`
+    )) as SupabaseUsageEventRow[];
+
+    return rows.map(rowToUsageEvent);
+  } catch (error) {
+    if (isMissingSupabaseTableError(error, "usage_events")) {
+      isUsageEventsTableMissing = true;
+      return [...memoryUsageEvents]
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, limit);
+    }
+    throw error;
+  }
 }
 
 export async function listUsageEventsForUser(
@@ -286,9 +317,19 @@ export async function listUsageEventsForUser(
     .filter(Boolean)
     .join("&");
 
-  const rows = (await supabaseRequest(`usage_events?${filters}`)) as SupabaseUsageEventRow[];
-
-  return rows.map(rowToUsageEvent);
+  try {
+    const rows = (await supabaseRequest(`usage_events?${filters}`)) as SupabaseUsageEventRow[];
+    return rows.map(rowToUsageEvent);
+  } catch (error) {
+    if (isMissingSupabaseTableError(error, "usage_events")) {
+      isUsageEventsTableMissing = true;
+      return [...memoryUsageEvents]
+        .filter((event) => event.userId === userId && (!sinceIso || event.createdAt >= sinceIso))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, limit);
+    }
+    throw error;
+  }
 }
 
 export async function getUserPlanProfile(userId: string): Promise<UserPlanProfile | undefined> {
