@@ -89,6 +89,9 @@ Global rules:
 - Keep all sections mutually consistent.
 - Avoid repeating the same wording across all outputs.
 - Tailor wording to the job ad only where factually supported.
+- Meet every word-count requirement strictly.
+- Before returning JSON, silently check the approximate word count of each constrained field and revise if needed.
+- Aim for the middle of each allowed range instead of the minimum.
 - Return JSON only. No markdown, no code fences, no commentary.
 
 Section requirements:
@@ -108,18 +111,24 @@ Section requirements:
 
 3. motivation_letter_et
 - 250-400 words.
+- Target 300-340 words for safety.
 - Professional, persuasive, and role-specific.
 - Must sound natural and credible.
 - Should explain fit using supported evidence only.
 - Must not include unsupported claims, fake enthusiasm, or invented achievements.
+- If the first draft is under the minimum, add supported role-relevant detail rather than filler.
 
 4. statement_short_et
 - 50-80 words.
+- Target 60-70 words for safety.
 - A concise professional self-introduction in Estonian.
+- Must be a complete standalone paragraph, not a fragment.
 
 5. statement_long_et
 - 100-150 words.
+- Target 115-130 words for safety.
 - A more developed professional self-introduction in Estonian.
+- Must be clearly longer and more detailed than statement_short_et without repeating it verbatim.
 
 Style rules:
 - Professional, modern, polished Estonian.
@@ -144,21 +153,26 @@ Rules:
 - Use "Vajab täpsustamist" where needed.
 - Improve clarity, specificity, tone, and usefulness without changing the factual basis.
 - Avoid repeating phrasing from prior outputs where possible.
+- Meet any word-count requirement strictly.
+- Before returning JSON, silently check the approximate word count and revise if needed.
 - Return JSON only. No markdown, no commentary.
 
 Section-specific constraints:
 - analysis_summary_et: concise evidence-based fit summary
 - cv_et: ATS-friendly plain-text CV
-- motivation_letter_et: 250-400 words
-- statement_short_et: 50-80 words
-- statement_long_et: 100-150 words`;
+- motivation_letter_et: 250-400 words, target 300-340
+- statement_short_et: 50-80 words, target 60-70
+- statement_long_et: 100-150 words, target 115-130`;
 
 export const RETRY_APPEND = `Your previous response failed validation.
 Return valid JSON only.
 Do not include markdown.
 Do not omit required keys.
 Do not add extra keys.
-Respect all word-count and factuality constraints.`;
+Respect all word-count and factuality constraints.
+If a section was too short, expand only that section with supported detail until it is safely within range.
+If a section was too long, shorten only that section while preserving meaning.
+Silently self-check approximate word counts before returning the corrected JSON.`;
 
 export function buildAnalysisUserPrompt(cvText: string, jobAdText: string) {
   return `

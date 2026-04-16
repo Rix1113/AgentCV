@@ -22,6 +22,11 @@ import type { Response as OpenAIResponse, ResponseOutputItem, ResponseOutputMess
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 const MAX_MODEL_ATTEMPTS = 2;
+const WORD_COUNT_TARGETS = {
+  motivation_letter_et: "Target 300-340 words.",
+  statement_short_et: "Target 60-70 words.",
+  statement_long_et: "Target 115-130 words.",
+} as const;
 
 function isOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
   return item.type === "message";
@@ -86,6 +91,23 @@ function validateGeneratedDocuments(documents: GeneratedDocuments) {
   }
 
   return errors;
+}
+
+function formatValidationCorrectionMessage(errors: string[]) {
+  const guidance = errors.flatMap((error) => {
+    if (error.includes("motivation_letter_et")) {
+      return [error, WORD_COUNT_TARGETS.motivation_letter_et];
+    }
+    if (error.includes("statement_short_et")) {
+      return [error, WORD_COUNT_TARGETS.statement_short_et];
+    }
+    if (error.includes("statement_long_et")) {
+      return [error, WORD_COUNT_TARGETS.statement_long_et];
+    }
+    return [error];
+  });
+
+  return guidance.join(" ");
 }
 
 async function createJsonResponse(
@@ -175,7 +197,7 @@ export async function generateDocuments(cvText: string, jobAdText: string, analy
       if (attempt === MAX_MODEL_ATTEMPTS) {
         throw new Error(validationErrors.join("; "));
       }
-      correctionMessage = validationErrors.join("; ");
+      correctionMessage = formatValidationCorrectionMessage(validationErrors);
     } catch (error) {
       if (attempt === MAX_MODEL_ATTEMPTS) {
         console.error("Failed to parse documents response", { rawOutput });
