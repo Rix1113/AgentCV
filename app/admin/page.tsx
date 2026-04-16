@@ -1,10 +1,14 @@
+import { AdminPlanForm } from "@/components/AdminPlanForm";
 import { Header } from "@/components/Header";
+import { updateUserPlanAction } from "@/app/admin/actions";
 import { requireAdminUser } from "@/lib/auth";
+import { listAdminManagedUsers } from "@/lib/store";
 import { buildAdminAnalytics, recordUsageEvent } from "@/lib/usage";
 
 export default async function AdminPage() {
   const user = await requireAdminUser();
   const analytics = await buildAdminAnalytics();
+  const managedUsers = await listAdminManagedUsers();
   const maxDailyEvents = Math.max(...analytics.dailyUsage.map((day) => day.events), 0);
 
   await recordUsageEvent({
@@ -24,11 +28,76 @@ export default async function AdminPage() {
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-sky-200">Admin analytics</p>
-            <h1 className="mt-2 text-3xl font-bold">Usage overview</h1>
+            <p className="text-sm uppercase tracking-[0.24em] text-sky-200">Admin settings</p>
+            <h1 className="mt-2 text-3xl font-bold">Users and usage overview</h1>
             <p className="mt-2 text-sm text-slate-400">
               Generated at {new Date(analytics.generatedAt).toLocaleString("en-GB", { timeZone: "Europe/Tallinn" })}
             </p>
+          </div>
+        </div>
+
+        <div className="card mb-8 p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">User plans</h2>
+              <p className="mt-2 max-w-2xl text-sm text-slate-400">
+                Review signed-in users and update their stored `user_profiles.plan` without editing Supabase rows by hand.
+                Accounts listed in `ADMIN_EMAILS` always resolve to the `admin` plan and cannot be changed here.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Managed users</p>
+              <p className="mt-2 text-3xl font-bold text-white">{managedUsers.length}</p>
+            </div>
+          </div>
+
+          <div className="mt-6 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-slate-400">
+                <tr className="border-b border-white/10">
+                  <th className="pb-3 pr-4 font-medium">User</th>
+                  <th className="pb-3 pr-4 font-medium">Effective plan</th>
+                  <th className="pb-3 pr-4 font-medium">Last sign-in</th>
+                  <th className="pb-3 font-medium">Update stored plan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managedUsers.length ? (
+                  managedUsers.map((managedUser) => (
+                    <tr key={managedUser.userId} className="border-b border-white/5 align-top last:border-b-0">
+                      <td className="py-4 pr-4">
+                        <p className="font-medium text-white">{managedUser.displayEmail}</p>
+                        <p className="mt-1 text-xs text-slate-500">{managedUser.userId}</p>
+                        <p className="mt-2 text-xs text-slate-400">
+                          Created {formatDateTime(managedUser.createdAt)}
+                          {managedUser.profileUpdatedAt ? ` • Profile updated ${formatDateTime(managedUser.profileUpdatedAt)}` : ""}
+                        </p>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <span className="inline-flex rounded-full border border-sky-300/30 bg-sky-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">
+                          {managedUser.effectivePlan}
+                        </span>
+                        {managedUser.isAdmin ? (
+                          <p className="mt-2 max-w-xs text-xs text-slate-500">
+                            This user is an admin because their email matches `ADMIN_EMAILS`.
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="py-4 pr-4 text-slate-300">{formatDateTime(managedUser.lastSignInAt)}</td>
+                      <td className="py-4">
+                        <AdminPlanForm user={managedUser} action={updateUserPlanAction} />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-sm text-slate-400">
+                      No users found yet. Once people sign in, they will appear here.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -146,4 +215,12 @@ function formatEventType(value: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "Never";
+  }
+
+  return new Date(value).toLocaleString("en-GB", { timeZone: "Europe/Tallinn" });
 }

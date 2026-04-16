@@ -1,4 +1,6 @@
-import type { Project, UsageEvent, UsageEventType, UserPlanProfile } from "@/types";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isAdminEmail } from "@/lib/auth";
+import type { AdminManagedUser, PlanTier, Project, UsageEvent, UsageEventType, UserPlanProfile } from "@/types";
 import {
   hasSupabasePersistence,
   supabaseAnonKey,
@@ -295,6 +297,10 @@ export async function listUsageEvents(limit = 250): Promise<UsageEvent[]> {
   }
 }
 
+export function isUsageTrackingAvailable() {
+  return hasSupabasePersistence && !isUsageEventsTableMissing;
+}
+
 export async function listUsageEventsForUser(
   userId: string,
   limit = 250,
@@ -388,4 +394,145 @@ export async function saveUserPlanProfile(profile: UserPlanProfile): Promise<Use
 
     throw error;
   }
+}
+
+export async function listUserPlanProfiles(): Promise<UserPlanProfile[]> {
+  if (!hasSupabasePersistence) {
+    return [...memoryUserPlanProfiles.values()].sort(comparePlanProfiles);
+  }
+
+  if (isUserProfilesTableMissing) {
+    return [...memoryUserPlanProfiles.values()].sort(comparePlanProfiles);
+  }
+
+  try {
+    const rows = (await supabaseRequest(
+      "user_profiles?select=user_id,email,plan,created_at,updated_at&order=updated_at.desc"
+    )) as SupabaseUserPlanProfileRow[];
+
+    return rows.map(rowToUserPlanProfile);
+  } catch (error) {
+    if (isMissingSupabaseTableError(error, "user_profiles")) {
+      isUserProfilesTableMissing = true;
+      return [...memoryUserPlanProfiles.values()].sort(comparePlanProfiles);
+    }
+
+    throw error;
+  }
+}
+
+export async function listAdminManagedUsers(): Promise<AdminManagedUser[]> {
+  const profiles = await listUserPlanProfiles();
+  const profileByUserId = new Map(profiles.map((profile) => [profile.userId, profile]));
+
+  if (!hasSupabasePersistence) {
+    return profiles
+      .map((profile) => buildAdminManagedUser({
+        userId: profile.userId,
+        email: profile.email,
+        createdAt: profile.createdAt,
+        lastSignInAt: null,
+        profile,
+      }))
+      .sort(compareAdminManagedUsers);
+  }
+
+  const adminClient = getSupabaseAdminClient();
+  const authUsers: Array<{
+    id: string;
+    email: string | null;
+    createdAt: string | null;
+    lastSignInAt: string | null;
+  }> = [];
+
+  let page = 1;
+  const perPage = 200;
+
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw error;
+    }
+
+    const users = data.users ?? [];
+    authUsers.push(
+      ...users.map((user) => ({
+        id: user.id,
+        email: user.email ?? null,
+        createdAt: user.created_at ?? null,
+        lastSignInAt: user.last_sign_in_at ?? null,
+      }))
+    );
+
+    if (users.length < perPage) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  const managedUsers = authUsers.map((user) =>
+    buildAdminManagedUser({
+      userId: user.id,
+      email: user.email,
+      createdAt: user.createdAt,
+      lastSignInAt: user.lastSignInAt,
+      profile: profileByUserId.get(user.id),
+    })
+  );
+
+  for (const profile of profiles) {
+    if (!managedUsers.some((user) => user.userId === profile.userId)) {
+      managedUsers.push(
+        buildAdminManagedUser({
+          userId: profile.userId,
+          email: profile.email,
+          createdAt: profile.createdAt,
+          lastSignInAt: null,
+          profile,
+        })
+      );
+    }
+  }
+
+  return managedUsers.sort(compareAdminManagedUsers);
+}
+
+function buildAdminManagedUser(input: {
+  userId: string;
+  email: string | null;
+  createdAt: string | null;
+  lastSignInAt: string | null;
+  profile?: UserPlanProfile;
+}): AdminManagedUser {
+  const email = input.email ?? input.profile?.email ?? null;
+  const isAdmin = isAdminEmail(email);
+  const editablePlan: Exclude<PlanTier, "admin"> = input.profile?.plan ?? "free";
+
+  return {
+    userId: input.userId,
+    email,
+    displayEmail: email ?? "Unknown email",
+    createdAt: input.createdAt ?? input.profile?.createdAt ?? null,
+    lastSignInAt: input.lastSignInAt,
+    isAdmin,
+    effectivePlan: isAdmin ? "admin" : editablePlan,
+    editablePlan,
+    profileUpdatedAt: input.profile?.updatedAt ?? null,
+  };
+}
+
+function comparePlanProfiles(a: UserPlanProfile, b: UserPlanProfile) {
+  return b.updatedAt.localeCompare(a.updatedAt);
+}
+
+function compareAdminManagedUsers(a: AdminManagedUser, b: AdminManagedUser) {
+  const dateA = a.lastSignInAt ?? a.profileUpdatedAt ?? a.createdAt ?? "";
+  const dateB = b.lastSignInAt ?? b.profileUpdatedAt ?? b.createdAt ?? "";
+
+  if (dateA !== dateB) {
+    return dateB.localeCompare(dateA);
+  }
+
+  return a.displayEmail.localeCompare(b.displayEmail);
 }

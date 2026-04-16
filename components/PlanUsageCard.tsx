@@ -5,7 +5,14 @@ function formatPlanName(plan: PlanUsageSummary["plan"]) {
 }
 
 function formatQuotaValue(value: number | null) {
-  return value === null ? "Unlimited" : value.toString();
+  return value === null ? "Unknown" : value.toString();
+}
+
+function formatRemainingText(value: number | null, limit: number | null) {
+  if (value === null) {
+    return "remaining today";
+  }
+  return `remaining today${limit === null ? "" : ` of ${limit}`}`;
 }
 
 function formatResetTime(iso: string) {
@@ -40,22 +47,25 @@ export function PlanUsageCard({
           <p className="text-sm font-semibold text-white">Generations</p>
           <p className="mt-2 text-3xl font-bold text-white">{formatQuotaValue(summary.generations.remaining)}</p>
           <p className="mt-1 text-sm text-slate-300">
-            remaining today
-            {summary.generations.limit === null ? "" : ` of ${summary.generations.limit}`}
+            {formatRemainingText(summary.generations.remaining, summary.generations.limit)}
           </p>
-          <p className="mt-3 text-xs text-slate-500">Used: {summary.generations.used}</p>
+          <p className="mt-3 text-xs text-slate-500">Used: {summary.generations.used === null ? "Unknown" : summary.generations.used}</p>
         </div>
 
         <div className="rounded-2xl border border-border bg-black/10 p-4">
           <p className="text-sm font-semibold text-white">Exports</p>
           <p className="mt-2 text-3xl font-bold text-white">{formatQuotaValue(summary.exports.remaining)}</p>
           <p className="mt-1 text-sm text-slate-300">
-            remaining today
-            {summary.exports.limit === null ? "" : ` of ${summary.exports.limit}`}
+            {formatRemainingText(summary.exports.remaining, summary.exports.limit)}
           </p>
-          <p className="mt-3 text-xs text-slate-500">Used: {summary.exports.used}</p>
+          <p className="mt-3 text-xs text-slate-500">Used: {summary.exports.used === null ? "Unknown" : summary.exports.used}</p>
         </div>
       </div>
+      {!summary.trackingEnabled ? (
+        <p className="mt-4 text-sm text-amber-300">
+          Usage tracking is unavailable because Supabase persistence is not fully configured or the usage_events table is missing.
+        </p>
+      ) : null}
     </section>
   );
 }

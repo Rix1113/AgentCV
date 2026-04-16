@@ -66,6 +66,7 @@ export const USAGE_EVENT_TYPES = [
   "exported_pdf",
   "exported_docx",
   "admin_analytics_viewed",
+  "admin_user_plan_updated",
 ] as const;
 
 export type UsageEventType = (typeof USAGE_EVENT_TYPES)[number];
@@ -74,6 +75,9 @@ export type UsageEventMetadata = {
   method?: string;
   pathname?: string;
   userEmail?: string | null;
+  managedUserId?: string;
+  managedUserEmail?: string | null;
+  assignedPlan?: Exclude<PlanTier, "admin">;
   section?: DocumentSectionKey;
   exportFormat?: "pdf" | "docx";
   fitScoreBand?: FitScoreBand;
@@ -97,13 +101,14 @@ export type PlanTier = "free" | "pro" | "admin";
 export type PlanUsageSummary = {
   plan: PlanTier;
   resetsAt: string;
+  trackingEnabled: boolean;
   generations: {
-    used: number;
+    used: number | null;
     limit: number | null;
     remaining: number | null;
   };
   exports: {
-    used: number;
+    used: number | null;
     limit: number | null;
     remaining: number | null;
   };
@@ -115,4 +120,16 @@ export type UserPlanProfile = {
   plan: Exclude<PlanTier, "admin">;
   createdAt: string;
   updatedAt: string;
+};
+
+export type AdminManagedUser = {
+  userId: string;
+  email: string | null;
+  displayEmail: string;
+  lastSignInAt: string | null;
+  createdAt: string | null;
+  isAdmin: boolean;
+  effectivePlan: PlanTier;
+  editablePlan: Exclude<PlanTier, "admin">;
+  profileUpdatedAt: string | null;
 };

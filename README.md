@@ -67,3 +67,4 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 
 ## Suggested next steps
 - Add an admin settings screen to view users and change `user_profiles.plan` without editing Supabase rows manually.
+- For real persistent counts, need a working Supabase persistence config and a valid usage_events table

@@ -1,5 +1,5 @@
 import { isAdminEmail } from "@/lib/auth";
-import { getUserPlanProfile, listUsageEventsForUser, saveUserPlanProfile } from "@/lib/store";
+import { getUserPlanProfile, isUsageTrackingAvailable, listUsageEventsForUser, saveUserPlanProfile } from "@/lib/store";
 import type { PlanTier, PlanUsageSummary, UsageEventType, UserPlanProfile } from "@/types";
 
 type LimitedAction = "generation" | "export";
@@ -92,6 +92,10 @@ export async function assertPlanAllowance(input: PlanAllowanceInput): Promise<Pl
     return { ok: true, plan };
   }
 
+  if (!isUsageTrackingAvailable()) {
+    return { ok: true, plan };
+  }
+
   const actionLimits =
     input.action === "generation"
       ? {
@@ -178,16 +182,23 @@ export async function getPlanUsageSummary(userId: string, userEmail?: string | n
   const limits = getPlanLimits(plan);
   const now = Date.now();
   const dayStartIso = getUtcDayStart(now).toISOString();
-  const usageEvents = plan === "admin" ? [] : await listUsageEventsForUser(userId, 500, dayStartIso);
+  const trackingEnabled = plan === "admin" ? true : isUsageTrackingAvailable();
+  let generationCount: number | null = null;
+  let exportCount: number | null = null;
 
-  const generationCount = usageEvents.filter((event) =>
-    GENERATION_EVENT_TYPES.includes(event.eventType)
-  ).length;
-  const exportCount = usageEvents.filter((event) => EXPORT_EVENT_TYPES.includes(event.eventType)).length;
+  if (plan === "admin") {
+    generationCount = 0;
+    exportCount = 0;
+  } else if (trackingEnabled) {
+    const usageEvents = await listUsageEventsForUser(userId, 500, dayStartIso);
+    generationCount = usageEvents.filter((event) => GENERATION_EVENT_TYPES.includes(event.eventType)).length;
+    exportCount = usageEvents.filter((event) => EXPORT_EVENT_TYPES.includes(event.eventType)).length;
+  }
 
   return {
     plan,
     resetsAt: new Date(getNextUtcDayStart(now)).toISOString(),
+    trackingEnabled,
     generations: summarizeUsage(generationCount, limits.dailyGenerations),
     exports: summarizeUsage(exportCount, limits.dailyExports),
   };
@@ -240,7 +251,15 @@ function parseEmailList(value?: string) {
   );
 }
 
-function summarizeUsage(used: number, limit: number) {
+function summarizeUsage(used: number | null, limit: number) {
+  if (used === null) {
+    return {
+      used: null,
+      limit: null,
+      remaining: null,
+    };
+  }
+
   if (!Number.isFinite(limit) || limit >= Number.MAX_SAFE_INTEGER) {
     return {
       used,
