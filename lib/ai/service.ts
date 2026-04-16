@@ -22,11 +22,6 @@ import type { Response as OpenAIResponse, ResponseOutputItem, ResponseOutputMess
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 const MAX_MODEL_ATTEMPTS = 2;
-const WORD_COUNT_TARGETS = {
-  motivation_letter_et: "Target 300-340 words.",
-  statement_short_et: "Target 60-70 words.",
-  statement_long_et: "Target 115-130 words.",
-} as const;
 
 function isOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
   return item.type === "message";
@@ -52,31 +47,12 @@ function getResponseOutputText(response: OpenAIResponse) {
   return JSON.stringify(response);
 }
 
-function countWords(value: string) {
-  return value.trim().split(/\s+/).filter(Boolean).length;
-}
-
 function normalizeForComparison(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
 function validateGeneratedDocuments(documents: GeneratedDocuments) {
   const errors: string[] = [];
-  const motivationLetterWords = countWords(documents.motivation_letter_et);
-  const shortStatementWords = countWords(documents.statement_short_et);
-  const longStatementWords = countWords(documents.statement_long_et);
-
-  if (motivationLetterWords < 250 || motivationLetterWords > 400) {
-    errors.push(`motivation_letter_et must be 250-400 words, got ${motivationLetterWords}`);
-  }
-
-  if (shortStatementWords < 50 || shortStatementWords > 80) {
-    errors.push(`statement_short_et must be 50-80 words, got ${shortStatementWords}`);
-  }
-
-  if (longStatementWords < 100 || longStatementWords > 150) {
-    errors.push(`statement_long_et must be 100-150 words, got ${longStatementWords}`);
-  }
 
   const sectionsToCompare: Array<[DocumentSectionKey, DocumentSectionKey]> = [
     ["analysis_summary_et", "statement_short_et"],
@@ -91,23 +67,6 @@ function validateGeneratedDocuments(documents: GeneratedDocuments) {
   }
 
   return errors;
-}
-
-function formatValidationCorrectionMessage(errors: string[]) {
-  const guidance = errors.flatMap((error) => {
-    if (error.includes("motivation_letter_et")) {
-      return [error, WORD_COUNT_TARGETS.motivation_letter_et];
-    }
-    if (error.includes("statement_short_et")) {
-      return [error, WORD_COUNT_TARGETS.statement_short_et];
-    }
-    if (error.includes("statement_long_et")) {
-      return [error, WORD_COUNT_TARGETS.statement_long_et];
-    }
-    return [error];
-  });
-
-  return guidance.join(" ");
 }
 
 async function createJsonResponse(
@@ -197,7 +156,7 @@ export async function generateDocuments(cvText: string, jobAdText: string, analy
       if (attempt === MAX_MODEL_ATTEMPTS) {
         throw new Error(validationErrors.join("; "));
       }
-      correctionMessage = formatValidationCorrectionMessage(validationErrors);
+      correctionMessage = validationErrors.join("; ");
     } catch (error) {
       if (attempt === MAX_MODEL_ATTEMPTS) {
         console.error("Failed to parse documents response", { rawOutput });
