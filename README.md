@@ -29,12 +29,15 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 8. In Supabase SQL Editor, run [supabase/schema.sql](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/supabase/schema.sql) to create the required tables and indexes
 9. Install dependencies:
    npm install
-10. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`
-11. Start dev server:
+10. Verify the checked-in ESLint setup:
+   npm run lint
+11. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`
+12. Start dev server:
    npm run dev
 
 ## Notes
 - Ongoing follow-up work is tracked in [NEXT_STEPS.md] NEXT_STEPS.md.
+- ESLint is now checked in through [eslint.config.mjs](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/eslint.config.mjs), and `npm run lint` uses the ESLint CLI directly so local runs and CI do not hit Next.js's interactive first-run prompt.
 - Supabase Auth is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set.
 - Supabase Postgres persistence is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set.
 - If you skip `SUPABASE_SERVICE_ROLE_KEY`, the app falls back to in-memory project storage after sign-in.

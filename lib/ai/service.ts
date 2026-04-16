@@ -8,10 +8,15 @@ import {
 import { analysisSchema, documentsSchema } from "@/lib/ai/schemas";
 import { DOCUMENT_SECTION_KEYS } from "@/types";
 import type { AnalysisResult, DocumentSectionKey, GeneratedDocuments } from "@/types";
+import type { Response as OpenAIResponse, ResponseOutputItem, ResponseOutputMessage } from "openai/resources/responses/responses";
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 
-function getResponseOutputText(response: any) {
+function isOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
+  return item.type === "message";
+}
+
+function getResponseOutputText(response: OpenAIResponse) {
   if (typeof response.output_text === "string" && response.output_text.trim()) {
     return response.output_text;
   }
@@ -21,8 +26,10 @@ function getResponseOutputText(response: any) {
     if (typeof item === "string") {
       return item;
     }
-    if (Array.isArray(item.content)) {
-      return item.content.map((content: any) => content?.text ?? "").join("");
+    if (isOutputMessage(item) && Array.isArray(item.content)) {
+      return item.content
+        .map((content) => (content.type === "output_text" ? content.text : ""))
+        .join("");
     }
   }
 
