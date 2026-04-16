@@ -13,12 +13,17 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const supabase = await getSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  return user;
+    return user;
+  } catch (error) {
+    console.error("Failed to resolve current Supabase user", error);
+    return null;
+  }
 }
 
 export async function requireUser() {
