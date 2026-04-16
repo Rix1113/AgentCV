@@ -131,71 +131,90 @@ export function ResultsWorkspace({ project }: { project: Project }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <section className="card p-6">
-        <div className="mb-4 flex flex-wrap gap-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={tab.key === activeTab ? "button-primary" : "button-secondary"}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <section className="card p-6 sm:p-8">
+        <div className="mb-8 flex flex-col gap-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">Review workspace</p>
+              <h1 className="mt-3 text-4xl font-semibold text-ink">Refine each document section before export.</h1>
+              <p className="mt-3 helper-text">
+                Save polished edits, regenerate weaker sections, and keep version history close at hand while you work.
+              </p>
+            </div>
+            <div className="card-muted flex flex-wrap gap-3 p-3">
+              <button className="button-secondary" onClick={copyCurrent}>Copy</button>
+              <button className="button-secondary" onClick={() => void persistDocuments(content)} disabled={saving || regenerating}>
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button className="button-secondary" onClick={() => void regenerateActiveSection()} disabled={saving || regenerating}>
+                {regenerating ? "Regenerating..." : "Regenerate"}
+              </button>
+              <button className="button-secondary" onClick={() => exportFile("docx")}>DOCX</button>
+              <button className="button-secondary" onClick={() => exportFile("pdf")}>PDF</button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={tab.key === activeTab ? "button-primary" : "button-secondary"}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-3">
-          <button className="button-secondary" onClick={copyCurrent}>Copy</button>
-          <button className="button-secondary" onClick={() => void persistDocuments(content)} disabled={saving || regenerating}>
-            {saving ? "Saving..." : "Save"}
-          </button>
-          <button className="button-secondary" onClick={() => void regenerateActiveSection()} disabled={saving || regenerating}>
-            {regenerating ? "Regenerating..." : "Regenerate section"}
-          </button>
-          <button className="button-secondary" onClick={() => exportFile("docx")}>Download DOCX</button>
-          <button className="button-secondary" onClick={() => exportFile("pdf")}>Download PDF</button>
-        </div>
-        {status ? <p className="mb-3 text-sm text-emerald-300">{status}</p> : null}
-        {error ? <p className="mb-3 text-sm text-rose-300">{error}</p> : null}
+        {status ? <p className="mb-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{status}</p> : null}
+        {error ? <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
 
-        <label className="mb-2 block text-sm font-semibold">{activeLabel}</label>
-        <textarea
-          className="min-h-[34rem] w-full rounded-2xl border border-border bg-black/20 p-4 text-sm outline-none"
-          value={content[activeTab]}
-          onChange={(e) => setContent({ ...content, [activeTab]: e.target.value })}
-        />
+        <div className="card-muted p-4 sm:p-5">
+          <label className="label">{activeLabel}</label>
+          <textarea
+            className="min-h-[34rem] w-full rounded-[24px] border border-border bg-white p-4 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
+            value={content[activeTab]}
+            onChange={(e) => setContent({ ...content, [activeTab]: e.target.value })}
+          />
+        </div>
       </section>
 
       <aside className="card p-6">
-        <h2 className="text-lg font-semibold">Version history</h2>
-        <p className="mt-1 text-sm text-slate-300">Every generation, save, and restore creates a section snapshot.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">Version history</p>
+            <h2 className="mt-3 text-2xl font-semibold text-ink">{activeLabel}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">Every generation, save, and restore creates a snapshot for this section.</p>
+          </div>
+        </div>
 
         <div className="mt-5 grid gap-3">
           {activeHistory.map((version, index) => {
             const isCurrent = index === 0 && version.content === content[activeTab];
 
             return (
-              <div key={version.id} className="rounded-2xl border border-border bg-black/10 p-4">
+              <div key={version.id} className="card-muted p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold">
+                    <p className="text-sm font-semibold text-ink">
                       {sourceLabels[version.source]}
                       {isCurrent ? " · Current" : ""}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">{new Date(version.createdAt).toLocaleString()}</p>
+                    <p className="mt-1 text-xs text-muted">{new Date(version.createdAt).toLocaleString()}</p>
                   </div>
                   {!isCurrent ? (
-                    <button className="button-secondary text-sm" onClick={() => void restoreVersion(version.id)} disabled={saving || regenerating}>
+                    <button className="button-secondary px-4 py-2 text-sm" onClick={() => void restoreVersion(version.id)} disabled={saving || regenerating}>
                       Restore
                     </button>
                   ) : null}
                 </div>
-                <p className="mt-3 max-h-40 overflow-hidden whitespace-pre-wrap text-sm text-slate-200">{version.content}</p>
+                <p className="mt-3 max-h-40 overflow-hidden whitespace-pre-wrap text-sm leading-6 text-muted">{version.content}</p>
               </div>
             );
           })}
-          {!activeHistory.length ? <p className="text-sm text-slate-300">No versions yet.</p> : null}
+          {!activeHistory.length ? <p className="text-sm text-muted">No versions yet.</p> : null}
         </div>
       </aside>
     </div>

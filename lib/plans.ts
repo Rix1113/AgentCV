@@ -36,7 +36,11 @@ type PlanAllowanceResult =
       retryAfterSeconds: number;
     };
 
-const GENERATION_EVENT_TYPES: UsageEventType[] = ["documents_generated", "section_regenerated"];
+const GENERATION_EVENT_TYPES: UsageEventType[] = [
+  "analysis_generated",
+  "documents_generated",
+  "section_regenerated",
+];
 const EXPORT_EVENT_TYPES: UsageEventType[] = ["exported_pdf", "exported_docx"];
 let hasLoggedPlanFallbackWarning = false;
 

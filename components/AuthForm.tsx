@@ -55,7 +55,7 @@ export function AuthForm() {
   }
 
   return (
-    <div className="card p-6">
+    <div className="card p-6 sm:p-8">
       <div className="mb-6 flex gap-2">
         <button className={mode === "sign-in" ? "button-primary" : "button-secondary"} onClick={() => setMode("sign-in")} type="button">
           Sign in
@@ -67,18 +67,18 @@ export function AuthForm() {
 
       <form onSubmit={onSubmit} className="grid gap-4">
         <div>
-          <label className="mb-2 block text-sm font-semibold">Email</label>
+          <label className="label">Email</label>
           <input className="input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </div>
         <div>
-          <label className="mb-2 block text-sm font-semibold">Password</label>
+          <label className="label">Password</label>
           <input className="input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required />
         </div>
         <button className="button-primary" disabled={loading}>
           {loading ? "Working..." : mode === "sign-in" ? "Sign in" : "Create account"}
         </button>
-        {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
-        {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+        {message ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p> : null}
+        {error ? <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
       </form>
     </div>
   );

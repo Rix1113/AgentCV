@@ -15,7 +15,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return (
     <main>
       <Header />
-      <section className="mx-auto max-w-6xl px-6 py-10">
+      <section className="page-shell">
         <div className="mb-6">
           <PlanUsageCard
             summary={planSummary}
@@ -27,7 +27,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <ResultsWorkspace project={project} />
         ) : (
           <>
-            <h1 className="mb-6 text-3xl font-bold">New project</h1>
+            <div className="mb-8 max-w-3xl">
+              <p className="eyebrow">New project</p>
+              <h1 className="mt-4 text-5xl font-semibold text-ink">Start with your CV and the target role.</h1>
+              <p className="mt-4 section-copy">
+                Upload or paste both inputs, choose the generation model, and let the workspace prepare the first tailored draft.
+              </p>
+            </div>
             <ProjectForm />
           </>
         )}

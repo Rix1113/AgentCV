@@ -18,7 +18,7 @@ export function AuthStatus({ email }: { email?: string }) {
   }
 
   return (
-    <div className="flex items-center gap-3 text-sm text-slate-300">
+    <div className="flex items-center gap-3 text-sm text-muted">
       <span className="hidden sm:inline">{email}</span>
       <button className="button-secondary" onClick={onSignOut} type="button">
         Sign out
