@@ -6,6 +6,8 @@ import { buildDocx } from "@/lib/exports/docx";
 import { assertPlanAllowance } from "@/lib/plans";
 import { recordUsageEvent } from "@/lib/usage";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   const { error, user } = await requireApiUser();
   if (error) {

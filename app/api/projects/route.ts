@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { requireApiUser } from "@/lib/auth";
-import { normalizeStoredDocuments, updateDocumentSection } from "@/lib/documents";
+import { createEmptyStoredDocuments, normalizeStoredDocuments, updateDocumentSection } from "@/lib/documents";
 import { projectInputSchema, updateProjectDocumentsSchema } from "@/lib/validators/input";
 import { makeId } from "@/lib/utils";
 import { DOCUMENT_SECTION_KEYS } from "@/types";
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       title: parsed.title,
       cvText: parsed.cvText,
       jobAdText: parsed.jobAdText,
+      documents: createEmptyStoredDocuments(),
       createdAt: now,
       updatedAt: now,
     };

@@ -109,8 +109,11 @@ export function ResultsWorkspace({ project }: { project: Project }) {
 
       link.href = url;
       link.download = filename;
+      link.style.display = "none";
+      document.body.append(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setStatus(`${kind.toUpperCase()} exported.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to export ${kind.toUpperCase()}.`);

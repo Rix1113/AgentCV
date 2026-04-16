@@ -3,6 +3,7 @@ import { PlanUsageCard } from "@/components/PlanUsageCard";
 import { ProjectForm } from "@/components/ProjectForm";
 import { ResultsWorkspace } from "@/components/ResultsWorkspace";
 import { requireUser } from "@/lib/auth";
+import { hasGeneratedDocuments } from "@/lib/documents";
 import { getPlanUsageSummary } from "@/lib/plans";
 import { getProject, getUsageTrackingStatus } from "@/lib/store";
 
@@ -25,7 +26,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             trackingMessage={usageTrackingStatus.available ? undefined : usageTrackingStatus.message}
           />
         </div>
-        {project?.documents ? (
+        {hasGeneratedDocuments(project?.documents) ? (
           <ResultsWorkspace project={project} />
         ) : (
           <>

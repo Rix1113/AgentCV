@@ -6,6 +6,8 @@ import { buildPdf } from "@/lib/exports/pdf";
 import { assertPlanAllowance } from "@/lib/plans";
 import { recordUsageEvent } from "@/lib/usage";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   const { error, user } = await requireApiUser();
   if (error) {
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return new Response(buffer, {
+  return new Response(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="estonian-job-agent.pdf"',

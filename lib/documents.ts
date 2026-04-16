@@ -16,6 +16,21 @@ export const DOCUMENT_SECTION_LABELS: Record<DocumentSectionKey, string> = {
   statement_long_et: "Pikk enesetutvustus",
 };
 
+export function createEmptyStoredDocuments(): StoredDocuments {
+  return DOCUMENT_SECTION_KEYS.reduce((acc, key) => {
+    acc[key] = "";
+    return acc;
+  }, {} as StoredDocuments);
+}
+
+export function hasGeneratedDocuments(documents?: StoredDocuments): documents is StoredDocuments {
+  if (!documents) {
+    return false;
+  }
+
+  return DOCUMENT_SECTION_KEYS.some((key) => documents[key].trim().length > 0);
+}
+
 export function toGeneratedDocuments(documents: StoredDocuments | GeneratedDocuments): GeneratedDocuments {
   return DOCUMENT_SECTION_KEYS.reduce((acc, key) => {
     acc[key] = documents[key];
