@@ -24,10 +24,12 @@ function formatResetTime(iso: string) {
 
 export function PlanUsageCard({
   summary,
+  trackingMessage,
   title = "Plan and quota",
   description = "Daily limits refresh automatically at the next UTC reset.",
 }: {
   summary: PlanUsageSummary;
+  trackingMessage?: string;
   title?: string;
   description?: string;
 }) {
@@ -63,7 +65,8 @@ export function PlanUsageCard({
       </div>
       {!summary.trackingEnabled ? (
         <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          Usage tracking is unavailable because Supabase persistence is not fully configured or the usage_events table is missing.
+          {trackingMessage ??
+            "Usage tracking is unavailable because Supabase persistence is not fully configured or the usage_events table is missing."}
         </p>
       ) : null}
     </section>

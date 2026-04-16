@@ -4,13 +4,14 @@ import { ProjectForm } from "@/components/ProjectForm";
 import { ResultsWorkspace } from "@/components/ResultsWorkspace";
 import { requireUser } from "@/lib/auth";
 import { getPlanUsageSummary } from "@/lib/plans";
-import { getProject } from "@/lib/store";
+import { getProject, getUsageTrackingStatus } from "@/lib/store";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ projectId?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const project = params.projectId ? await getProject(params.projectId, user.id) : undefined;
   const planSummary = await getPlanUsageSummary(user.id, user.email);
+  const usageTrackingStatus = getUsageTrackingStatus();
 
   return (
     <main>
@@ -21,6 +22,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             summary={planSummary}
             title="Current plan"
             description="Your quota reflects completed generations and exports for the current UTC day."
+            trackingMessage={usageTrackingStatus.available ? undefined : usageTrackingStatus.message}
           />
         </div>
         {project?.documents ? (

@@ -13,6 +13,23 @@ const memoryUsageEvents: UsageEvent[] = [];
 const memoryUserPlanProfiles = new Map<string, UserPlanProfile>();
 let isUsageEventsTableMissing = false;
 let isUserProfilesTableMissing = false;
+let usageEventsTableMissingDetectedAt = 0;
+
+const SUPABASE_MISSING_TABLE_RETRY_MS = 60_000;
+
+export type UsageTrackingStatus =
+  | { available: true }
+  | {
+      available: false;
+      reason: "missing_env";
+      message: string;
+    }
+  | {
+      available: false;
+      reason: "missing_table";
+      table: "usage_events";
+      message: string;
+    };
 
 type SupabaseProjectRow = {
   id: string;
@@ -194,6 +211,23 @@ function isMissingSupabaseTableError(error: unknown, tableName: string) {
   return error.message.includes("PGRST205") && error.message.includes(`'public.${tableName}'`);
 }
 
+function shouldUseMemoryUsageEventsFallback() {
+  return (
+    isUsageEventsTableMissing &&
+    Date.now() - usageEventsTableMissingDetectedAt < SUPABASE_MISSING_TABLE_RETRY_MS
+  );
+}
+
+function markUsageEventsTableMissing() {
+  isUsageEventsTableMissing = true;
+  usageEventsTableMissingDetectedAt = Date.now();
+}
+
+function markUsageEventsTableAvailable() {
+  isUsageEventsTableMissing = false;
+  usageEventsTableMissingDetectedAt = 0;
+}
+
 export async function listProjects(userId: string): Promise<Project[]> {
   if (!hasSupabasePersistence) {
     return Array.from(memoryStore.values())
@@ -242,7 +276,7 @@ export async function createUsageEvent(event: UsageEvent): Promise<UsageEvent> {
     return event;
   }
 
-  if (isUsageEventsTableMissing) {
+  if (shouldUseMemoryUsageEventsFallback()) {
     memoryUsageEvents.unshift(event);
     return event;
   }
@@ -255,9 +289,10 @@ export async function createUsageEvent(event: UsageEvent): Promise<UsageEvent> {
       },
       body: JSON.stringify(usageEventToSupabaseRow(event)),
     });
+    markUsageEventsTableAvailable();
   } catch (error) {
     if (isMissingSupabaseTableError(error, "usage_events")) {
-      isUsageEventsTableMissing = true;
+      markUsageEventsTableMissing();
       memoryUsageEvents.unshift(event);
       return event;
     }
@@ -274,7 +309,7 @@ export async function listUsageEvents(limit = 250): Promise<UsageEvent[]> {
       .slice(0, limit);
   }
 
-  if (isUsageEventsTableMissing) {
+  if (shouldUseMemoryUsageEventsFallback()) {
     return [...memoryUsageEvents]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, limit);
@@ -285,10 +320,11 @@ export async function listUsageEvents(limit = 250): Promise<UsageEvent[]> {
       `usage_events?select=id,user_id,event_type,route,project_id,metadata,created_at&order=created_at.desc&limit=${Math.max(1, limit)}`
     )) as SupabaseUsageEventRow[];
 
+    markUsageEventsTableAvailable();
     return rows.map(rowToUsageEvent);
   } catch (error) {
     if (isMissingSupabaseTableError(error, "usage_events")) {
-      isUsageEventsTableMissing = true;
+      markUsageEventsTableMissing();
       return [...memoryUsageEvents]
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, limit);
@@ -298,7 +334,30 @@ export async function listUsageEvents(limit = 250): Promise<UsageEvent[]> {
 }
 
 export function isUsageTrackingAvailable() {
-  return hasSupabasePersistence && !isUsageEventsTableMissing;
+  return hasSupabasePersistence && !shouldUseMemoryUsageEventsFallback();
+}
+
+export function getUsageTrackingStatus(): UsageTrackingStatus {
+  if (!hasSupabasePersistence) {
+    return {
+      available: false,
+      reason: "missing_env",
+      message:
+        "Usage tracking is currently using in-memory fallback because Supabase persistence env vars are incomplete. Add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable durable quota tracking.",
+    };
+  }
+
+  if (isUsageEventsTableMissing) {
+    return {
+      available: false,
+      reason: "missing_table",
+      table: "usage_events",
+      message:
+        "Usage tracking is currently using in-memory fallback because the usage_events table was not found in Supabase. Run the SQL in supabase/schema.sql to create the required tables.",
+    };
+  }
+
+  return { available: true };
 }
 
 export async function listUsageEventsForUser(
@@ -307,6 +366,13 @@ export async function listUsageEventsForUser(
   sinceIso?: string
 ): Promise<UsageEvent[]> {
   if (!hasSupabasePersistence) {
+    return [...memoryUsageEvents]
+      .filter((event) => event.userId === userId && (!sinceIso || event.createdAt >= sinceIso))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  if (shouldUseMemoryUsageEventsFallback()) {
     return [...memoryUsageEvents]
       .filter((event) => event.userId === userId && (!sinceIso || event.createdAt >= sinceIso))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -325,10 +391,11 @@ export async function listUsageEventsForUser(
 
   try {
     const rows = (await supabaseRequest(`usage_events?${filters}`)) as SupabaseUsageEventRow[];
+    markUsageEventsTableAvailable();
     return rows.map(rowToUsageEvent);
   } catch (error) {
     if (isMissingSupabaseTableError(error, "usage_events")) {
-      isUsageEventsTableMissing = true;
+      markUsageEventsTableMissing();
       return [...memoryUsageEvents]
         .filter((event) => event.userId === userId && (!sinceIso || event.createdAt >= sinceIso))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))

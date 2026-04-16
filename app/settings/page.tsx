@@ -2,10 +2,12 @@ import { Header } from "@/components/Header";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import { requireUser } from "@/lib/auth";
 import { getPlanUsageSummary } from "@/lib/plans";
+import { getUsageTrackingStatus } from "@/lib/store";
 
 export default async function SettingsPage() {
   const user = await requireUser();
   const planSummary = await getPlanUsageSummary(user.id, user.email);
+  const usageTrackingStatus = getUsageTrackingStatus();
 
   return (
     <main>
@@ -17,6 +19,7 @@ export default async function SettingsPage() {
             summary={planSummary}
             title="Billing and plan limits"
             description="This reflects your currently active plan and the remaining daily quota available right now."
+            trackingMessage={usageTrackingStatus.available ? undefined : usageTrackingStatus.message}
           />
 
           <div className="card p-6 text-slate-300">
