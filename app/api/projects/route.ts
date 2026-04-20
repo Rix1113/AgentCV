@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { requireApiUser } from "@/lib/auth";
 import { createEmptyStoredDocuments, normalizeStoredDocuments, updateDocumentSection } from "@/lib/documents";
+import { getValidationErrorStatus } from "@/lib/input-limits";
 import { projectInputSchema, updateProjectDocumentsSchema } from "@/lib/validators/input";
 import { makeId } from "@/lib/utils";
 import { DOCUMENT_SECTION_KEYS } from "@/types";
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
           ? error.message
           : "Unable to create project";
 
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof ZodError ? getValidationErrorStatus(error) : 400 });
   }
 }
 
@@ -123,6 +124,6 @@ export async function PATCH(request: NextRequest) {
           ? error.message
           : "Unable to update project";
 
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof ZodError ? getValidationErrorStatus(error) : 400 });
   }
 }

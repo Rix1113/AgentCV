@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeInputs } from "@/lib/ai/service";
 import { requireApiUser } from "@/lib/auth";
+import { getValidationErrorStatus } from "@/lib/input-limits";
 import { assertPlanAllowance } from "@/lib/plans";
 import { getProject, saveProject } from "@/lib/store";
 import { normalizeText } from "@/lib/parsers/text";
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
           error: "Invalid request body",
           issues: formatValidationErrors(parsedBody.error),
         },
-        { status: 400 }
+        { status: getValidationErrorStatus(parsedBody.error) }
       );
     }
 

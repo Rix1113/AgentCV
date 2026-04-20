@@ -1,10 +1,28 @@
 import { analysisSchema } from "@/lib/ai/schemas";
+import {
+  CV_TEXT_MAX_LENGTH,
+  CV_TEXT_MIN_LENGTH,
+  getTextInputLengthMessage,
+  JOB_AD_TEXT_MAX_LENGTH,
+  JOB_AD_TEXT_MIN_LENGTH,
+  PROJECT_TITLE_MAX_LENGTH,
+} from "@/lib/input-limits";
 import { z } from "zod";
 
+const cvTextSchema = z
+  .string()
+  .min(CV_TEXT_MIN_LENGTH, getTextInputLengthMessage("cvText"))
+  .max(CV_TEXT_MAX_LENGTH, getTextInputLengthMessage("cvText"));
+
+const jobAdTextSchema = z
+  .string()
+  .min(JOB_AD_TEXT_MIN_LENGTH, getTextInputLengthMessage("jobAdText"))
+  .max(JOB_AD_TEXT_MAX_LENGTH, getTextInputLengthMessage("jobAdText"));
+
 export const projectInputSchema = z.object({
-  title: z.string().min(2).max(120),
-  cvText: z.string().min(80, "CV is too short"),
-  jobAdText: z.string().min(80, "Job ad is too short"),
+  title: z.string().min(2).max(PROJECT_TITLE_MAX_LENGTH),
+  cvText: cvTextSchema,
+  jobAdText: jobAdTextSchema,
 });
 
 const requestProjectIdSchema = z.string().min(1, "Project id is required");
@@ -12,8 +30,8 @@ const requestProjectIdSchema = z.string().min(1, "Project id is required");
 export const analyzeRequestSchema = z
   .object({
     projectId: requestProjectIdSchema.optional(),
-    cvText: z.string().min(80, "CV is too short"),
-    jobAdText: z.string().min(80, "Job ad is too short"),
+    cvText: cvTextSchema,
+    jobAdText: jobAdTextSchema,
     demo: z.boolean().optional(),
   })
   .superRefine((value, ctx) => {
@@ -29,8 +47,8 @@ export const analyzeRequestSchema = z
 export const generateRequestSchema = z
   .object({
     projectId: requestProjectIdSchema.optional(),
-    cvText: z.string().min(80, "CV is too short"),
-    jobAdText: z.string().min(80, "Job ad is too short"),
+    cvText: cvTextSchema,
+    jobAdText: jobAdTextSchema,
     analysis: analysisSchema,
     demo: z.boolean().optional(),
   })
@@ -53,8 +71,8 @@ export const regenerateSectionSchema = z.object({
     "statement_short_et",
     "statement_long_et",
   ]),
-  cvText: z.string().min(80),
-  jobAdText: z.string().min(80),
+  cvText: cvTextSchema,
+  jobAdText: jobAdTextSchema,
 });
 
 export const updateProjectDocumentsSchema = z.object({

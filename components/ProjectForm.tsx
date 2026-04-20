@@ -4,6 +4,16 @@ import { ChangeEvent, useRef, useState } from "react";
 import { ResultsWorkspace } from "@/components/ResultsWorkspace";
 import type { StoredDocuments } from "@/types";
 import { useRouter } from "next/navigation";
+import {
+  CV_TEXT_MIN_LENGTH,
+  formatCharacterCount,
+  getRemainingCharacters,
+  getTextInputLengthMessage,
+  JOB_AD_TEXT_MIN_LENGTH,
+  PROJECT_TITLE_MAX_LENGTH,
+  TEXT_INPUT_LIMITS,
+  TextInputField,
+} from "@/lib/input-limits";
 import { SUPPORTED_UPLOAD_ACCEPT } from "@/lib/parsers/upload-config";
 
 export function ProjectForm({ demo = false }: { demo?: boolean }) {
@@ -13,21 +23,60 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
   const [jobAdText, setJobAdText] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadingField, setUploadingField] = useState<"cv" | "jobAd" | null>(null);
-  const [demoDocuments, setDemoDocuments] = useState<StoredDocuments | null>(null);  const [error, setError] = useState<string | null>(null);
+  const [demoDocuments, setDemoDocuments] = useState<StoredDocuments | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const cvFileInputRef = useRef<HTMLInputElement | null>(null);
   const jobAdFileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function readError(response: Response, fallback: string) {
     try {
       const payload = await response.json();
+      if (Array.isArray(payload.issues) && payload.issues.length > 0) {
+        return payload.issues.map((issue: { message?: string }) => issue.message).filter(Boolean).join(" ");
+      }
+
       return payload.error ?? fallback;
     } catch {
       return fallback;
     }
   }
 
+  function validateTextField(field: TextInputField, value: string) {
+    const limits = TEXT_INPUT_LIMITS[field];
+
+    if (value.length < limits.min || value.length > limits.max) {
+      return getTextInputLengthMessage(field);
+    }
+
+    return null;
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+
+    if (title.trim().length < 2) {
+      setError("Project title must be at least 2 characters.");
+      return;
+    }
+
+    if (title.length > PROJECT_TITLE_MAX_LENGTH) {
+      setError(`Project title must be ${formatCharacterCount(PROJECT_TITLE_MAX_LENGTH)} or less.`);
+      return;
+    }
+
+    const cvError = validateTextField("cvText", cvText);
+    if (cvError) {
+      setError(cvError);
+      return;
+    }
+
+    const jobAdError = validateTextField("jobAdText", jobAdText);
+    if (jobAdError) {
+      setError(jobAdError);
+      return;
+    }
+
     setLoading(true);
     try {
       let projectId;
@@ -71,7 +120,8 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
-    }  }
+    }
+  }
 
   async function onFileSelected(field: "cv" | "jobAd", event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -87,6 +137,7 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("field", field === "cv" ? "cvText" : "jobAdText");
 
       const response = await fetch("/api/parse-upload", {
         method: "POST",
@@ -113,6 +164,19 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
   if (demoDocuments) {
     return <ResultsWorkspace project={{ id: "demo", userId: "demo", title: "Demo Project", cvText, jobAdText, documents: demoDocuments, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }} />;
   }
+
+  const cvRemaining = getRemainingCharacters("cvText", cvText);
+  const jobAdRemaining = getRemainingCharacters("jobAdText", jobAdText);
+  const disableSubmit =
+    loading ||
+    uploadingField !== null ||
+    title.trim().length < 2 ||
+    title.length > PROJECT_TITLE_MAX_LENGTH ||
+    cvText.length < CV_TEXT_MIN_LENGTH ||
+    cvText.length > TEXT_INPUT_LIMITS.cvText.max ||
+    jobAdText.length < JOB_AD_TEXT_MIN_LENGTH ||
+    jobAdText.length > TEXT_INPUT_LIMITS.jobAdText.max;
+
   return (
     <form onSubmit={onSubmit} className="grid gap-6">
       <div className="card p-6 sm:p-8">
@@ -132,7 +196,7 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
 
       <div className="card p-6 sm:p-8">
         <label className="label">Project title</label>
-        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input className="input" value={title} maxLength={PROJECT_TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -140,7 +204,9 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <label className="label mb-1">CV</label>
-              <p className="helper-text">Paste plain text or upload a supported file for parsing.</p>
+              <p className="helper-text">
+                Paste plain text or upload a supported file for parsing. Keep it between {formatCharacterCount(CV_TEXT_MIN_LENGTH)} and {formatCharacterCount(TEXT_INPUT_LIMITS.cvText.max)}.
+              </p>
             </div>
             <button
               type="button"
@@ -158,14 +224,25 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
             className="hidden"
             onChange={(event) => void onFileSelected("cv", event)}
           />
-          <textarea className="textarea" value={cvText} onChange={(e) => setCvText(e.target.value)} placeholder="Paste CV text here..." />
+          <textarea
+            className="textarea"
+            value={cvText}
+            maxLength={TEXT_INPUT_LIMITS.cvText.max}
+            onChange={(e) => setCvText(e.target.value)}
+            placeholder="Paste CV text here..."
+          />
+          <p className={`mt-3 text-sm ${cvRemaining < 300 ? "text-amber-700" : "text-muted"}`}>
+            {formatCharacterCount(cvText.length)} used, {formatCharacterCount(cvRemaining)} remaining.
+          </p>
         </div>
 
         <div className="card p-6 sm:p-8">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <label className="label mb-1">Job advertisement</label>
-              <p className="helper-text">Include responsibilities, expectations, and keywords from the posting.</p>
+              <p className="helper-text">
+                Include responsibilities, expectations, and keywords from the posting. Keep it between {formatCharacterCount(JOB_AD_TEXT_MIN_LENGTH)} and {formatCharacterCount(TEXT_INPUT_LIMITS.jobAdText.max)}.
+              </p>
             </div>
             <button
               type="button"
@@ -183,7 +260,16 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
             className="hidden"
             onChange={(event) => void onFileSelected("jobAd", event)}
           />
-          <textarea className="textarea" value={jobAdText} onChange={(e) => setJobAdText(e.target.value)} placeholder="Paste job ad here..." />
+          <textarea
+            className="textarea"
+            value={jobAdText}
+            maxLength={TEXT_INPUT_LIMITS.jobAdText.max}
+            onChange={(e) => setJobAdText(e.target.value)}
+            placeholder="Paste job ad here..."
+          />
+          <p className={`mt-3 text-sm ${jobAdRemaining < 300 ? "text-amber-700" : "text-muted"}`}>
+            {formatCharacterCount(jobAdText.length)} used, {formatCharacterCount(jobAdRemaining)} remaining.
+          </p>
         </div>
       </div>
 
@@ -193,7 +279,7 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
           <p className="mt-1 helper-text">You’ll be taken straight into the review workspace once generation finishes.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button className="button-primary" disabled={loading}>{loading ? "Generating..." : "Generate documents"}</button>
+          <button className="button-primary" disabled={disableSubmit}>{loading ? "Generating..." : "Generate documents"}</button>
         </div>
       </div>
 
