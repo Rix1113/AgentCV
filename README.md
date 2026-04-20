@@ -2,6 +2,20 @@
 
 A premium starter web app that turns a CV and a job ad into polished Estonian application materials.
 
+## Architecture Overview
+- `app/api/*` route handlers stay thin and orchestrate auth, quota checks, AI generation, persistence, and response shaping.
+- `lib/auth.ts` centralizes user and admin access checks for page routes and API routes.
+- `lib/plans.ts` owns plan resolution, quota calculation, rate limiting, and fallback plan behavior.
+- `lib/usage.ts` records product events and builds the current admin analytics view.
+- `lib/store.ts` acts as the persistence adapter for projects, usage events, and user plan profiles, with both Supabase-backed and in-memory fallback paths.
+- `app/admin/*` provides operational tooling for analytics visibility and user plan management.
+
+## Current State
+- Authenticated users can create projects, analyze CV and job-ad pairs, generate application documents, regenerate individual sections, and export results.
+- Admins can review usage analytics and update stored `user_profiles.plan` values for managed users.
+- The app currently favors operational resilience: when some Supabase persistence pieces are missing, parts of the system fall back to in-memory behavior instead of hard-failing.
+- The biggest remaining architecture gaps are analytics scalability, durable quota enforcement, stricter request validation, and clearer production-hardening guidance.
+
 ## Included
 - Next.js App Router app
 - Dashboard, history, and settings pages
@@ -46,8 +60,22 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - The `documents` JSON stores per-section version history under `_history`.
 - Export requests include `projectId` for proper attribution in usage events.
 
+## Known Technical Gaps
+- Admin analytics currently aggregate only the latest slice of usage events, so totals and rankings will drift as data grows.
+- Quota enforcement depends on usage tracking persistence; if usage tracking falls back to memory, limits are no longer durable across instances or restarts.
+- `app/api/analyze/route.ts` and `app/api/generate/route.ts` still need request schema validation comparable to the safer regeneration route.
+- The current admin user overview loads all auth users page by page, which is acceptable for a small install base but will become slow at larger scale.
+- Supabase row-level security is enabled in schema, but most persistence currently flows through the service-role backend path, so application-layer authorization remains critical.
+
+## Recommended Next Work
+- Add request validation schemas for analysis and generation routes.
+- Replace in-memory quota fallback with durable behavior or explicit degraded-mode controls.
+- Move admin analytics toward database-level aggregation or precomputed summaries.
+- Add production-grade smoke tests for auth, quotas, generation, export, and admin flows.
+- Document deployment expectations, environment requirements, and operational failure modes more explicitly.
+
 ## Notes
-- Ongoing follow-up work is tracked in [NEXT_STEPS.md] NEXT_STEPS.md.
+- Ongoing follow-up work is tracked in [NEXT_STEPS.md](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/NEXT_STEPS.md).
 - ESLint is now checked in through [eslint.config.mjs](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/eslint.config.mjs), and `npm run lint` uses the ESLint CLI directly so local runs and CI do not hit Next.js's interactive first-run prompt.
 - Supabase Auth is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set.
 - Supabase Postgres persistence is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set.
