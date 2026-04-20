@@ -46,7 +46,7 @@ let hasLoggedPlanFallbackWarning = false;
 
 const DEFAULT_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
-    dailyGenerations: 10,
+    dailyGenerations: 1,
     dailyExports: 8,
     generationRate: { max: 3, windowMs: 10 * 60 * 1000 },
     exportRate: { max: 5, windowMs: 10 * 60 * 1000 },

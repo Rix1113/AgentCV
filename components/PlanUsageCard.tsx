@@ -1,6 +1,9 @@
 import type { PlanUsageSummary } from "@/types";
 
 function formatPlanName(plan: PlanUsageSummary["plan"]) {
+  if (plan === "free") {
+    return "Demo";
+  }
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 

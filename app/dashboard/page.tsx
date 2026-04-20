@@ -22,7 +22,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <PlanUsageCard
             summary={planSummary}
             title="Current plan"
-            description="Your quota reflects completed generations and exports for the current UTC day."
+            description={planSummary.plan === "free" ? "Try the demo with one free generation per day." : "Your quota reflects completed generations and exports for the current UTC day."}
             trackingMessage={usageTrackingStatus.available ? undefined : usageTrackingStatus.message}
           />
         </div>
