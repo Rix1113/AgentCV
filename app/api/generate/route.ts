@@ -9,52 +9,62 @@ import { recordUsageEvent } from "@/lib/usage";
 
 export async function POST(request: NextRequest) {
   try {
-    const { error, user } = await requireApiUser();
-    if (error) {
-      return error;
-    }
-
-    const allowance = await assertPlanAllowance({
-      userId: user.id,
-      userEmail: user.email,
-      action: "generation",
-    });
-    if (!allowance.ok) {
-      return NextResponse.json(
-        {
-          error: allowance.error,
-          code: allowance.code,
-          plan: allowance.plan,
-          retryAfterSeconds: allowance.retryAfterSeconds,
-        },
-        {
-          status: allowance.status,
-          headers: {
-            "Retry-After": String(allowance.retryAfterSeconds),
-          },
-        }
-      );
-    }
-
     const body = await request.json();
+    const isDemo = body.demo === true;
+
+    let user = null;
+    if (!isDemo) {
+      const { error, user: authUser } = await requireApiUser();
+      if (error) {
+        return error;
+      }
+      user = authUser;
+
+      const allowance = await assertPlanAllowance({
+        userId: user.id,
+        userEmail: user.email,
+        action: "generation",
+      });
+      if (!allowance.ok) {
+        return NextResponse.json(
+          {
+            error: allowance.error,
+            code: allowance.code,
+            plan: allowance.plan,
+            retryAfterSeconds: allowance.retryAfterSeconds,
+          },
+          {
+            status: allowance.status,
+            headers: {
+              "Retry-After": String(allowance.retryAfterSeconds),
+            },
+          }
+        );
+      }
+    }
+
     const documents = normalizeStoredDocuments(
       await generateDocuments(normalizeText(body.cvText), normalizeText(body.jobAdText), body.analysis)
     );
-    const project = await getProject(body.projectId, user.id);
-    if (project) {
-      await saveProject({ ...project, documents, updatedAt: new Date().toISOString() });
+
+    if (!isDemo) {
+      const project = await getProject(body.projectId, user!.id);
+      if (project) {
+        await saveProject({ ...project, documents, updatedAt: new Date().toISOString() });
+      }
+      await recordUsageEvent({
+        userId: user!.id,
+        userEmail: user!.email,
+        eventType: "documents_generated",
+        route: request.nextUrl.pathname,
+        projectId: project?.id ?? body.projectId,
+        metadata: {
+          method: request.method,
+          pathname: request.nextUrl.pathname,
+        },
+      });
     }
-    await recordUsageEvent({
-      userId: user.id,
-      userEmail: user.email,
-      eventType: "documents_generated",
-      route: request.nextUrl.pathname,
-      projectId: project?.id ?? body.projectId,
-      metadata: {
-        method: request.method,
-        pathname: request.nextUrl.pathname,
-      },
-    });
+
     return NextResponse.json({ documents });
   } catch (error) {
     console.error("/api/generate failed", error);

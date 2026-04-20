@@ -8,50 +8,60 @@ import { recordUsageEvent } from "@/lib/usage";
 
 export async function POST(request: NextRequest) {
   try {
-    const { error, user } = await requireApiUser();
-    if (error) {
-      return error;
-    }
-
-    const allowance = await assertPlanAllowance({
-      userId: user.id,
-      userEmail: user.email,
-      action: "generation",
-    });
-    if (!allowance.ok) {
-      return NextResponse.json(
-        {
-          error: allowance.error,
-          code: allowance.code,
-          plan: allowance.plan,
-          retryAfterSeconds: allowance.retryAfterSeconds,
-        },
-        {
-          status: allowance.status,
-          headers: {
-            "Retry-After": String(allowance.retryAfterSeconds),
-          },
-        }
-      );
-    }
-
     const body = await request.json();
-    const analysis = await analyzeInputs(normalizeText(body.cvText), normalizeText(body.jobAdText));
-    const project = await getProject(body.projectId, user.id);
-    if (project) {
-      await saveProject({ ...project, analysis, updatedAt: new Date().toISOString() });
+    const isDemo = body.demo === true;
+
+    let user = null;
+    if (!isDemo) {
+      const { error, user: authUser } = await requireApiUser();
+      if (error) {
+        return error;
+      }
+      user = authUser;
+
+      const allowance = await assertPlanAllowance({
+        userId: user.id,
+        userEmail: user.email,
+        action: "generation",
+      });
+      if (!allowance.ok) {
+        return NextResponse.json(
+          {
+            error: allowance.error,
+            code: allowance.code,
+            plan: allowance.plan,
+            retryAfterSeconds: allowance.retryAfterSeconds,
+          },
+          {
+            status: allowance.status,
+            headers: {
+              "Retry-After": String(allowance.retryAfterSeconds),
+            },
+          }
+        );
+      }
     }
-    await recordUsageEvent({
-      userId: user.id,
-      userEmail: user.email,
-      eventType: "analysis_generated",
-      route: request.nextUrl.pathname,
-      projectId: project?.id ?? body.projectId,
-      metadata: {
-        method: request.method,
-        pathname: request.nextUrl.pathname,
-      },
-    });
+
+    const analysis = await analyzeInputs(normalizeText(body.cvText), normalizeText(body.jobAdText));
+
+    if (!isDemo) {
+      const project = await getProject(body.projectId, user!.id);
+      if (project) {
+        await saveProject({ ...project, analysis, updatedAt: new Date().toISOString() });
+      }
+      await recordUsageEvent({
+        userId: user!.id,
+        userEmail: user!.email,
+        eventType: "analysis_generated",
+        route: request.nextUrl.pathname,
+        projectId: project?.id ?? body.projectId,
+        metadata: {
+          method: request.method,
+          pathname: request.nextUrl.pathname,
+        },
+      });
+    }
+
     return NextResponse.json({ analysis });
   } catch (error) {
     console.error("/api/analyze failed", error);

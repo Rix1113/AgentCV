@@ -1,17 +1,19 @@
 "use client";
 
 import { ChangeEvent, useRef, useState } from "react";
+import { ResultsWorkspace } from "@/components/ResultsWorkspace";
+import type { StoredDocuments } from "@/types";
 import { useRouter } from "next/navigation";
 import { SUPPORTED_UPLOAD_ACCEPT } from "@/lib/parsers/upload-config";
 
-export function ProjectForm() {
+export function ProjectForm({ demo = false }: { demo?: boolean }) {
   const router = useRouter();
   const [title, setTitle] = useState("New Application Project");
   const [cvText, setCvText] = useState("");
   const [jobAdText, setJobAdText] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadingField, setUploadingField] = useState<"cv" | "jobAd" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [demoDocuments, setDemoDocuments] = useState<StoredDocuments | null>(null);  const [error, setError] = useState<string | null>(null);
   const cvFileInputRef = useRef<HTMLInputElement | null>(null);
   const jobAdFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -27,22 +29,26 @@ export function ProjectForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-
     try {
-      const projectRes = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, cvText, jobAdText }),
-      });
+      let projectId;
+      if (demo) {
+        projectId = "demo";
+      } else {
+        const projectRes = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, cvText, jobAdText }),
+        });
 
-      if (!projectRes.ok) throw new Error(await readError(projectRes, "Failed to create project"));
-      const project = await projectRes.json();
+        if (!projectRes.ok) throw new Error(await readError(projectRes, "Failed to create project"));
+        const project = await projectRes.json();
+        projectId = project.id;
+      }
 
       const analyzeRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, cvText, jobAdText }),
+        body: JSON.stringify({ projectId, cvText, jobAdText, demo }),
       });
       if (!analyzeRes.ok) throw new Error(await readError(analyzeRes, "Analysis failed"));
       const { analysis } = await analyzeRes.json();
@@ -50,18 +56,22 @@ export function ProjectForm() {
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, cvText, jobAdText, analysis }),
+        body: JSON.stringify({ projectId, cvText, jobAdText, analysis, demo }),
       });
       if (!generateRes.ok) throw new Error(await readError(generateRes, "Generation failed"));
+      const { documents } = await generateRes.json();
 
-      router.push(`/dashboard?projectId=${project.id}`);
-      router.refresh();
+      if (demo) {
+        setDemoDocuments(documents);
+      } else {
+        router.push(`/dashboard?projectId=${projectId}`);
+        router.refresh();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
-    }
-  }
+    }  }
 
   async function onFileSelected(field: "cv" | "jobAd", event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -100,6 +110,9 @@ export function ProjectForm() {
     }
   }
 
+  if (demoDocuments) {
+    return <ResultsWorkspace project={{ id: "demo", userId: "demo", title: "Demo Project", cvText, jobAdText, documents: demoDocuments, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }} />;
+  }
   return (
     <form onSubmit={onSubmit} className="grid gap-6">
       <div className="card p-6 sm:p-8">
