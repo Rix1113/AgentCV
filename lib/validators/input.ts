@@ -1,3 +1,4 @@
+import { analysisSchema } from "@/lib/ai/schemas";
 import { z } from "zod";
 
 export const projectInputSchema = z.object({
@@ -5,6 +6,43 @@ export const projectInputSchema = z.object({
   cvText: z.string().min(80, "CV is too short"),
   jobAdText: z.string().min(80, "Job ad is too short"),
 });
+
+const requestProjectIdSchema = z.string().min(1, "Project id is required");
+
+export const analyzeRequestSchema = z
+  .object({
+    projectId: requestProjectIdSchema.optional(),
+    cvText: z.string().min(80, "CV is too short"),
+    jobAdText: z.string().min(80, "Job ad is too short"),
+    demo: z.boolean().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.demo !== true && !value.projectId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Project id is required",
+        path: ["projectId"],
+      });
+    }
+  });
+
+export const generateRequestSchema = z
+  .object({
+    projectId: requestProjectIdSchema.optional(),
+    cvText: z.string().min(80, "CV is too short"),
+    jobAdText: z.string().min(80, "Job ad is too short"),
+    analysis: analysisSchema,
+    demo: z.boolean().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.demo !== true && !value.projectId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Project id is required",
+        path: ["projectId"],
+      });
+    }
+  });
 
 export const regenerateSectionSchema = z.object({
   projectId: z.string().min(1),
@@ -39,3 +77,10 @@ export const updateProjectDocumentsSchema = z.object({
     .partial()
     .optional(),
 });
+
+export function formatValidationErrors(error: z.ZodError) {
+  return error.issues.map((issue) => ({
+    path: issue.path.join("."),
+    message: issue.message,
+  }));
+}

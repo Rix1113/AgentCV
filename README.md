@@ -14,7 +14,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Authenticated users can create projects, analyze CV and job-ad pairs, generate application documents, regenerate individual sections, and export results.
 - Admins can review usage analytics and update stored `user_profiles.plan` values for managed users.
 - The app currently favors operational resilience: when some Supabase persistence pieces are missing, parts of the system fall back to in-memory behavior instead of hard-failing.
-- The biggest remaining architecture gaps are analytics scalability, durable quota enforcement, stricter request validation, and clearer production-hardening guidance.
+- The biggest remaining architecture gaps are analytics scalability, durable quota enforcement, input-size controls, and clearer production-hardening guidance.
 
 ## Included
 - Next.js App Router app
@@ -53,6 +53,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Admin plan updates resolve the managed user server-side via bound action arguments and auth/profile lookup, never trusting posted hidden fields.
 - Export actions send `projectId` and only download successful file responses; non-OK payloads are surfaced inline.
 - Analysis, generation, regeneration, and export endpoints enforce plan-aware daily caps and rate windows server-side.
+- Analysis and generation routes now validate request bodies before doing auth, quota checks, AI calls, or persistence work, returning structured `400` responses for malformed payloads.
 - Usage events and user plan profiles fall back gracefully to in-memory storage when Supabase is not configured.
 - Projects are scoped to authenticated Supabase users through `user_id`.
 - Plan resolution prefers stored `user_profiles.plan` and lazily creates rows for signed-in users.
@@ -63,12 +64,12 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 ## Known Technical Gaps
 - Admin analytics currently aggregate only the latest slice of usage events, so totals and rankings will drift as data grows.
 - Quota enforcement depends on usage tracking persistence; if usage tracking falls back to memory, limits are no longer durable across instances or restarts.
-- `app/api/analyze/route.ts` and `app/api/generate/route.ts` still need request schema validation comparable to the safer regeneration route.
+- CV text and job-ad text still need explicit maximum-size limits and consistent UX messaging when those limits are exceeded.
 - The current admin user overview loads all auth users page by page, which is acceptable for a small install base but will become slow at larger scale.
 - Supabase row-level security is enabled in schema, but most persistence currently flows through the service-role backend path, so application-layer authorization remains critical.
 
 ## Recommended Next Work
-- Add request validation schemas for analysis and generation routes.
+- Define and enforce max input sizes for CV text and job-ad text in both the UI and API.
 - Replace in-memory quota fallback with durable behavior or explicit degraded-mode controls.
 - Move admin analytics toward database-level aggregation or precomputed summaries.
 - Add production-grade smoke tests for auth, quotas, generation, export, and admin flows.
@@ -88,6 +89,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Plan resolution now prefers `user_profiles.plan` and lazily creates a row for each signed-in user when plan-aware pages or APIs are used.
 - Dashboard and settings now show a more specific warning when usage tracking has fallen back to memory because env vars are missing or `usage_events` has not been created yet.
 - Admin plan updates now bind the managed user server-side and re-resolve that user from auth/profile data before saving, so the flow never trusts hidden form fields for identity-sensitive values.
+- `/api/analyze` and `/api/generate` now validate request payloads with shared Zod schemas, so malformed bodies return structured `400` responses instead of surfacing later as generic server failures.
 - The `documents` JSON now also stores per-section version history under `_history`, so no extra database column is required.
 - Billing is still a scaffold-level placeholder, but analysis, generation, regeneration, and export endpoints now enforce plan-aware daily caps and rate windows server-side.
 - Analysis requests count against the same generation quota and retry window used for document generation and section regeneration.

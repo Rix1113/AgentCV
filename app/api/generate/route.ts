@@ -6,11 +6,25 @@ import { assertPlanAllowance } from "@/lib/plans";
 import { getProject, saveProject } from "@/lib/store";
 import { normalizeText } from "@/lib/parsers/text";
 import { recordUsageEvent } from "@/lib/usage";
+import { formatValidationErrors, generateRequestSchema } from "@/lib/validators/input";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const isDemo = body.demo === true;
+    const parsedBody = generateRequestSchema.safeParse(body);
+
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          issues: formatValidationErrors(parsedBody.error),
+        },
+        { status: 400 }
+      );
+    }
+
+    const payload = parsedBody.data;
+    const isDemo = payload.demo === true;
 
     let user = null;
     if (!isDemo) {
@@ -44,11 +58,11 @@ export async function POST(request: NextRequest) {
     }
 
     const documents = normalizeStoredDocuments(
-      await generateDocuments(normalizeText(body.cvText), normalizeText(body.jobAdText), body.analysis)
+      await generateDocuments(normalizeText(payload.cvText), normalizeText(payload.jobAdText), payload.analysis)
     );
 
     if (!isDemo) {
-      const project = await getProject(body.projectId, user!.id);
+      const project = await getProject(payload.projectId!, user!.id);
       if (project) {
         await saveProject({ ...project, documents, updatedAt: new Date().toISOString() });
       }
@@ -57,7 +71,7 @@ export async function POST(request: NextRequest) {
         userEmail: user!.email,
         eventType: "documents_generated",
         route: request.nextUrl.pathname,
-        projectId: project?.id ?? body.projectId,
+        projectId: project?.id ?? payload.projectId,
         metadata: {
           method: request.method,
           pathname: request.nextUrl.pathname,
