@@ -4,6 +4,12 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 
 ## Current priorities
 1. Run a full smoke pass covering sign-in, project creation, analysis, generation, regeneration, export, admin plan changes, and settings/history flows.
+2. Max length of CV and job advertisement
+3. 
+
+## Completed
+- Documented security hardening improvements in README.md and NEXT_STEPS.md
+- Refactored homepage to remove workflow step repetitions
 
 ## Notes
 - `/api/analyze` now uses the same plan allowance and retry behavior as generation routes.
@@ -12,5 +18,3 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 - Export actions now send `projectId` and only download successful file responses; non-OK export payloads are surfaced inline in the review workspace.
 - Supabase persistence now ships with a checked-in bootstrap script at `supabase/schema.sql`, so `projects`, `usage_events`, and `user_profiles` can be created without reconstructing the schema from README notes.
 - Keep this file updated as tasks are completed or new follow-up work appears.
-
-#Keep this comment: # Update README.md and NEXT_STEPS.md to document the hardening and mark that follow-up item complete.

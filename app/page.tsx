@@ -89,24 +89,13 @@ export default function HomePage() {
 
       <section className="page-shell pt-4">
         <div className="card overflow-hidden p-8 sm:p-10">
-          <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-            <div>
-              <p className="eyebrow">Built for the real workflow</p>
-              <h2 className="mt-6 section-title">Upload, generate, review, and export without leaving the same flow.</h2>
-              <p className="mt-5 section-copy">
-                The interface is intentionally simple: clean prompts up front, roomy editing surfaces in the middle, and
-                export controls where they matter. Everything supports the application process rather than distracting from it.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {workflowSteps.map((step, index) => (
-                <div key={step.title} className="card-muted p-5">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">Step {index + 1}</p>
-                  <h3 className="mt-4 text-2xl font-semibold text-ink">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-muted">{step.copy}</p>
-                </div>
-              ))}
-            </div>
+          <div>
+            <p className="eyebrow">Built for the real workflow</p>
+            <h2 className="mt-6 section-title">Upload, generate, review, and export without leaving the same flow.</h2>
+            <p className="mt-5 section-copy">
+              The interface is intentionally simple: clean prompts up front, roomy editing surfaces in the middle, and
+              export controls where they matter. Everything supports the application process rather than distracting from it.
+            </p>
           </div>
         </div>
       </section>

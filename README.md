@@ -35,6 +35,17 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 12. Start dev server:
    npm run dev
 
+## Security and Reliability Improvements
+- Admin plan updates resolve the managed user server-side via bound action arguments and auth/profile lookup, never trusting posted hidden fields.
+- Export actions send `projectId` and only download successful file responses; non-OK payloads are surfaced inline.
+- Analysis, generation, regeneration, and export endpoints enforce plan-aware daily caps and rate windows server-side.
+- Usage events and user plan profiles fall back gracefully to in-memory storage when Supabase is not configured.
+- Projects are scoped to authenticated Supabase users through `user_id`.
+- Plan resolution prefers stored `user_profiles.plan` and lazily creates rows for signed-in users.
+- Dashboard and settings show specific warnings when usage tracking falls back to memory.
+- The `documents` JSON stores per-section version history under `_history`.
+- Export requests include `projectId` for proper attribution in usage events.
+
 ## Notes
 - Ongoing follow-up work is tracked in [NEXT_STEPS.md] NEXT_STEPS.md.
 - ESLint is now checked in through [eslint.config.mjs](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/eslint.config.mjs), and `npm run lint` uses the ESLint CLI directly so local runs and CI do not hit Next.js's interactive first-run prompt.
