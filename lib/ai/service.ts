@@ -20,7 +20,7 @@ import {
 import type { AnalysisResult, DocumentSectionKey, GeneratedDocuments } from "@/types";
 import type { Response as OpenAIResponse, ResponseOutputItem, ResponseOutputMessage } from "openai/resources/responses/responses";
 
-const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
+const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 const MAX_MODEL_ATTEMPTS = 2;
 
 function isOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
@@ -72,13 +72,12 @@ function validateGeneratedDocuments(documents: GeneratedDocuments) {
 async function createJsonResponse(
   userContent: string,
   schemaName: string,
-  schema: object,
-  model?: string,
+  schema: Record<string, unknown>,
   correctionMessage?: string
 ) {
   const client = getOpenAIClient();
   const response = await client.responses.create({
-    model: model ?? MODEL,
+    model: MODEL,
     input: [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -100,7 +99,7 @@ async function createJsonResponse(
   return getResponseOutputText(response);
 }
 
-export async function analyzeInputs(cvText: string, jobAdText: string, model?: string): Promise<AnalysisResult> {
+export async function analyzeInputs(cvText: string, jobAdText: string): Promise<AnalysisResult> {
   const userContent = `${ANALYSIS_INSTRUCTIONS}\n\n${buildAnalysisUserPrompt(cvText, jobAdText)}`;
   let correctionMessage: string | undefined;
 
@@ -109,7 +108,6 @@ export async function analyzeInputs(cvText: string, jobAdText: string, model?: s
       userContent,
       "analysis",
       analysisResponseJsonSchema,
-      model,
       correctionMessage
     );
 
@@ -128,7 +126,7 @@ export async function analyzeInputs(cvText: string, jobAdText: string, model?: s
   throw new Error("Analysis response parsing failed");
 }
 
-export async function generateDocuments(cvText: string, jobAdText: string, analysis: AnalysisResult, model?: string): Promise<GeneratedDocuments> {
+export async function generateDocuments(cvText: string, jobAdText: string, analysis: AnalysisResult): Promise<GeneratedDocuments> {
   const userContent = `${GENERATION_INSTRUCTIONS}\n\n${buildGenerationUserPrompt(
     cvText,
     jobAdText,
@@ -141,7 +139,6 @@ export async function generateDocuments(cvText: string, jobAdText: string, analy
       userContent,
       "documents",
       generationResponseJsonSchema,
-      model,
       correctionMessage
     );
 
@@ -194,7 +191,6 @@ export async function regenerateDocumentSection(
       userContent,
       "regenerated_section",
       createSectionRegenerationResponseJsonSchema(section),
-      MODEL,
       correctionMessage
     );
 

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const documents = normalizeStoredDocuments(
-      await generateDocuments(normalizeText(body.cvText), normalizeText(body.jobAdText), body.analysis, body.model)
+      await generateDocuments(normalizeText(body.cvText), normalizeText(body.jobAdText), body.analysis)
     );
     const project = await getProject(body.projectId, user.id);
     if (project) {

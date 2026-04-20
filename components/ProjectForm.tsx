@@ -9,7 +9,6 @@ export function ProjectForm() {
   const [title, setTitle] = useState("New Application Project");
   const [cvText, setCvText] = useState("");
   const [jobAdText, setJobAdText] = useState("");
-  const [model, setModel] = useState("gpt-5.4-mini");
   const [loading, setLoading] = useState(false);
   const [uploadingField, setUploadingField] = useState<"cv" | "jobAd" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +42,7 @@ export function ProjectForm() {
       const analyzeRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, cvText, jobAdText, model }),
+        body: JSON.stringify({ projectId: project.id, cvText, jobAdText }),
       });
       if (!analyzeRes.ok) throw new Error(await readError(analyzeRes, "Analysis failed"));
       const { analysis } = await analyzeRes.json();
@@ -51,7 +50,7 @@ export function ProjectForm() {
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, cvText, jobAdText, analysis, model }),
+        body: JSON.stringify({ projectId: project.id, cvText, jobAdText, analysis }),
       });
       if (!generateRes.ok) throw new Error(await readError(generateRes, "Generation failed"));
 
@@ -109,7 +108,7 @@ export function ProjectForm() {
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">Project setup</p>
             <h2 className="mt-3 text-3xl font-semibold text-ink">Name the application and prepare your source material.</h2>
             <p className="mt-3 helper-text">
-              Keep the workflow lightweight: add a project title, bring in your CV and the job ad, then choose the model for generation.
+              Keep the workflow lightweight: add a project title, bring in your CV and the job ad.
             </p>
           </div>
           <div className="card-muted px-4 py-3 text-sm text-muted">
@@ -172,26 +171,6 @@ export function ProjectForm() {
             onChange={(event) => void onFileSelected("jobAd", event)}
           />
           <textarea className="textarea" value={jobAdText} onChange={(e) => setJobAdText(e.target.value)} placeholder="Paste job ad here..." />
-        </div>
-      </div>
-
-      <div className="card p-6 sm:p-8">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
-          <div>
-            <label className="label">ChatGPT version</label>
-            <p className="mb-3 helper-text">Choose the model that matches the speed and quality tradeoff you want for this project.</p>
-            <select className="input" value={model} onChange={(e) => setModel(e.target.value)}>
-              <option value="gpt-5.4-mini">GPT-5.4 mini</option>
-              <option value="gpt-5.4">GPT-5.4</option>
-              <option value="gpt-5">GPT-5</option>
-            </select>
-          </div>
-          <div className="card-muted p-5">
-            <p className="text-sm font-semibold text-ink">What happens next</p>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              The app creates a project, analyzes your fit, and generates tailored documents before opening the review workspace.
-            </p>
-          </div>
         </div>
       </div>
 
