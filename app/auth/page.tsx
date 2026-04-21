@@ -36,6 +36,9 @@ export default async function AuthPage() {
           <p className="mt-6 max-w-2xl section-copy">
             Supabase Auth protects the dashboard and ties every saved project to one account.
           </p>
+          <p className="mt-4 max-w-2xl text-sm text-muted">
+            You can also reset a forgotten password here and finish recovery from the email link on this same page.
+          </p>
         </div>
         <AuthForm />
       </section>

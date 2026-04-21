@@ -13,6 +13,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 ## Current State
 - Authenticated users can create projects, analyze CV and job-ad pairs, generate application documents, regenerate individual sections, and export results.
 - Admins can review usage analytics and update stored `user_profiles.plan` values for managed users.
+- Auth supports sign-up, sign-in, password reset email delivery, and in-app password recovery completion on `/auth`.
 - The app currently favors operational resilience: when some Supabase persistence pieces are missing, parts of the system fall back to in-memory behavior instead of hard-failing.
 - The biggest remaining architecture gaps are analytics scalability, durable quota enforcement, and clearer production-hardening guidance.
 
@@ -23,6 +24,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - OpenAI-backed prompt pipeline
 - DOCX and PDF export routes
 - Supabase Auth-ready account flow
+- Sign-in, sign-up, and password reset screens
 - In-memory or Supabase-backed project storage
 - Shared CV and job-ad input limits with client guidance and API-side rejection
 
@@ -46,7 +48,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
    npm install
 10. Verify the checked-in ESLint setup:
    npm run lint
-11. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`
+11. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`, so sign-in confirmations and password reset links can return to the app
 12. Start dev server:
    npm run dev
 
@@ -79,6 +81,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Ongoing follow-up work is tracked in [NEXT_STEPS.md](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/NEXT_STEPS.md).
 - ESLint is now checked in through [eslint.config.mjs](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/eslint.config.mjs), and `npm run lint` uses the ESLint CLI directly so local runs and CI do not hit Next.js's interactive first-run prompt.
 - Supabase Auth is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set.
+- The auth UI now supports Supabase password recovery by sending users back to `/auth`, where they can choose and save a new password.
 - Supabase Postgres persistence is enabled automatically when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set.
 - If you skip `SUPABASE_SERVICE_ROLE_KEY`, the app falls back to in-memory project storage after sign-in.
 - If you skip the Supabase Auth env vars, protected pages and APIs will remain unavailable until auth is configured.

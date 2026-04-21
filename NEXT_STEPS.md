@@ -43,6 +43,7 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 - Refactored homepage to remove workflow step repetitions
 - Expanded README.md with architecture notes, technical gaps, and recommended next work
 - Reworked NEXT_STEPS.md into a clearer engineering and product roadmap
+- Added a Supabase password reset flow so users can request a reset link and choose a new password from `/auth`
 - Added shared schema validation for `/api/analyze` and `/api/generate` so malformed request bodies fail fast and consistently
 - Defined shared max input sizes for CV and job-ad text, added UI guidance plus character counters, and enforced API-side `413` rejection for oversized inputs
 
@@ -50,6 +51,7 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 - `/api/analyze` now uses the same plan allowance and retry behavior as generation routes.
 - `/api/analyze` and `/api/generate` now validate their request bodies with shared Zod schemas and return structured `400` validation errors for malformed payloads.
 - CV text is now capped at `20,000` characters and job-ad text at `16,000` characters across the form, upload parsing, project creation, analysis, generation, and regeneration flows.
+- The auth flow now includes a "Forgot your password?" path that sends a Supabase recovery email and lets the user set a new password when they return to `/auth`.
 - `npm run lint` is now backed by a checked-in ESLint flat config plus direct ESLint CLI usage, so local development and CI no longer hit Next.js's interactive setup prompt.
 - Admin plan updates now resolve the managed user on the server via a bound action argument plus auth/profile lookup, instead of trusting posted hidden fields.
 - Export actions now send `projectId` and only download successful file responses; non-OK export payloads are surfaced inline in the review workspace.
