@@ -11,7 +11,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - `app/admin/*` provides operational tooling for analytics visibility and user plan management.
 
 ## Current State
-- Authenticated users can create projects, analyze CV and job-ad pairs, generate application documents, regenerate individual sections, and export results.
+- Authenticated users can create projects, analyze CV and job-ad pairs, generate application documents, regenerate individual sections, and download each generated section separately as DOCX or PDF.
 - Admins can review usage analytics and update stored `user_profiles.plan` values for managed users.
 - Auth supports sign-up, sign-in, password reset email delivery, and in-app password recovery completion on `/auth`.
 - The app currently favors operational resilience: when some Supabase persistence pieces are missing, parts of the system fall back to in-memory behavior instead of hard-failing.
@@ -22,7 +22,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Dashboard, history, and settings pages
 - Analysis and generation API routes
 - OpenAI-backed prompt pipeline
-- DOCX and PDF export routes
+- Per-section DOCX and PDF download flow
 - Supabase Auth-ready account flow
 - Sign-in, sign-up, and password reset screens
 - In-memory or Supabase-backed project storage
@@ -54,7 +54,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 
 ## Security and Reliability Improvements
 - Admin plan updates resolve the managed user server-side via bound action arguments and auth/profile lookup, never trusting posted hidden fields.
-- Export actions send `projectId` and only download successful file responses; non-OK payloads are surfaced inline.
+- Export actions send `projectId`, `section`, and `format`, only download successful file responses, and surface non-OK payloads inline.
 - Analysis, generation, regeneration, and export endpoints enforce plan-aware daily caps and rate windows server-side.
 - Analysis and generation routes now validate request bodies before doing auth, quota checks, AI calls, or persistence work, returning structured `400` responses for malformed payloads.
 - CV and job-ad inputs now have shared max-length rules across the form, upload parsing, project creation, analysis, generation, and regeneration endpoints; oversized payloads are rejected with `413` responses.
@@ -64,6 +64,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Dashboard and settings show specific warnings when usage tracking falls back to memory.
 - The `documents` JSON stores per-section version history under `_history`.
 - Export requests include `projectId` for proper attribution in usage events.
+- Client-rendered timestamps use a deterministic UTC formatter to avoid hydration mismatches between server and browser locale output.
 
 ## Known Technical Gaps
 - Admin analytics currently aggregate only the latest slice of usage events, so totals and rankings will drift as data grows.
@@ -98,7 +99,10 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Billing is still a scaffold-level placeholder, but analysis, generation, regeneration, and export endpoints now enforce plan-aware daily caps and rate windows server-side.
 - Analysis requests count against the same generation quota and retry window used for document generation and section regeneration.
 - Export failures now stay inline in the review workspace, so plan/auth/rate-limit JSON errors are shown to the user instead of being downloaded as broken `.pdf` or `.docx` files.
+- Export downloads are now section-specific through `/api/projects`, so analysis, CV, motivation letter, short self-introduction, and long self-introduction are downloaded separately instead of as one bundled file.
+- The legacy combined `/api/export/pdf` and `/api/export/docx` endpoints now return `410` so the all-in-one file path cannot still be used accidentally.
 - Export requests now include `projectId`, which lets PDF and DOCX usage events stay attributed to the originating project.
+- Review workspace and history timestamps now render in a fixed UTC format, preventing server/client locale mismatches during hydration.
 - Dashboard and settings now show the active plan plus remaining daily generation/export quota for the signed-in user.
 - `ADMIN_EMAILS` users are treated as the `admin` plan with effectively unlimited analysis/generation/export access.
 - `PRO_PLAN_EMAILS` remains a fallback for bootstrapping `pro` users; once a `user_profiles` row exists, that stored plan becomes the source of truth for non-admin users.
