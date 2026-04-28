@@ -24,6 +24,7 @@ const PRIVATE_IPV6_PREFIXES = ["fc", "fd", "fe80"];
 type ExtractedJobAd = {
   text: string;
   title?: string;
+  warning?: string;
 };
 
 export function assertSafeRemoteUrl(rawUrl: string) {
@@ -95,11 +96,10 @@ export async function fetchJobAdFromUrl(rawUrl: string): Promise<ExtractedJobAd>
       ? finalizeExtractedText({ text: html })
       : await extractJobAdFromHtml(html);
 
-    if (extracted.text.length < JOB_AD_TEXT_MIN_LENGTH) {
-      throw new Error(getTextInputLengthMessage("jobAdText"));
-    }
-
-    return extracted;
+    return {
+      ...extracted,
+      warning: extracted.text.length < JOB_AD_TEXT_MIN_LENGTH ? getTextInputLengthMessage("jobAdText") : undefined,
+    };
   } catch (error) {
     if (error instanceof InputSizeLimitError) {
       throw error;

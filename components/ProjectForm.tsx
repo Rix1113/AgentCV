@@ -24,6 +24,9 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
   const [jobAdUrl, setJobAdUrl] = useState("");
   const [jobAdText, setJobAdText] = useState("");
   const [jobAdPreviewTitle, setJobAdPreviewTitle] = useState<string | null>(null);
+  const [jobAdPreviewText, setJobAdPreviewText] = useState("");
+  const [jobAdImportMessage, setJobAdImportMessage] = useState<string | null>(null);
+  const [jobAdImportStatus, setJobAdImportStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [loading, setLoading] = useState(false);
   const [uploadingField, setUploadingField] = useState<"cv" | "jobAd" | null>(null);
   const [fetchingJobAd, setFetchingJobAd] = useState(false);
@@ -174,6 +177,8 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
 
     setFetchingJobAd(true);
     setError(null);
+    setJobAdImportStatus("loading");
+    setJobAdImportMessage("Fetching the vacancy and preparing a preview...");
 
     try {
       const response = await fetch("/api/fetch-job-ad", {
@@ -188,20 +193,27 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
       }
 
       setJobAdText(payload.text);
+      setJobAdPreviewText(payload.text);
       setJobAdPreviewTitle(payload.title ?? null);
+      setJobAdImportStatus("success");
+      setJobAdImportMessage(payload.warning ?? "Imported job advertisement preview is ready.");
 
       if (payload.title && title === "New Application Project") {
         setTitle(payload.title);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+      setJobAdPreviewText("");
+      setJobAdImportStatus("error");
+      setJobAdImportMessage(message);
     } finally {
       setFetchingJobAd(false);
     }
   }
 
   const jobAdPreviewSnippet =
-    jobAdText.length > 600 ? `${jobAdText.slice(0, 600).trimEnd()}...` : jobAdText;
+    jobAdPreviewText.length > 600 ? `${jobAdPreviewText.slice(0, 600).trimEnd()}...` : jobAdPreviewText;
   const jobAdPreviewHost = jobAdUrl.trim()
     ? (() => {
         try {
@@ -345,23 +357,42 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
           <p className="mb-4 text-sm text-muted">
             The app will pull the readable job-ad text into the field below so you can review it before generation.
           </p>
-          {jobAdText ? (
-            <div className="mb-4 rounded-[28px] border border-slate-200/80 bg-slate-50/90 p-5">
+          {jobAdImportStatus !== "idle" ? (
+            <div
+              className={`mb-4 rounded-[28px] border p-5 ${
+                jobAdImportStatus === "error"
+                  ? "border-rose-200 bg-rose-50/95"
+                  : "border-slate-200/80 bg-slate-50/90"
+              }`}
+            >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Imported preview</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+                    {jobAdImportStatus === "loading"
+                      ? "Importing preview"
+                      : jobAdImportStatus === "error"
+                        ? "Import issue"
+                        : "Imported preview"}
+                  </p>
                   <p className="mt-2 text-base font-semibold text-ink">
-                    {jobAdPreviewTitle ?? "Fetched job advertisement"}
+                    {jobAdImportStatus === "error"
+                      ? "The vacancy could not be previewed"
+                      : jobAdPreviewTitle ?? "Fetched job advertisement"}
                   </p>
                 </div>
                 <p className="text-sm text-muted">
                   {jobAdPreviewHost ? `${jobAdPreviewHost} • ` : ""}
-                  {formatCharacterCount(jobAdText.length)}
+                  {jobAdImportStatus === "success" ? formatCharacterCount(jobAdPreviewText.length) : "Waiting for result"}
                 </p>
               </div>
-              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted">
-                {jobAdPreviewSnippet}
-              </p>
+              {jobAdImportMessage ? (
+                <p className="mt-3 text-sm leading-7 text-muted">{jobAdImportMessage}</p>
+              ) : null}
+              {jobAdPreviewSnippet ? (
+                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted">
+                  {jobAdPreviewSnippet}
+                </p>
+              ) : null}
             </div>
           ) : null}
           <input
