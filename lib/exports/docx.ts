@@ -1,24 +1,11 @@
 import {
-  AlignmentType,
-  BorderStyle,
   Document,
   HeadingLevel,
   Packer,
-  PageNumber,
   Paragraph,
-  TextRun,
   convertInchesToTwip,
 } from "docx";
 import { parseExportBlocks } from "@/lib/exports/structured-text";
-
-function formatExportDate() {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date());
-}
 
 function createStyledParagraphsFromText(text: string) {
   const blocks = parseExportBlocks(text);
@@ -51,37 +38,8 @@ function createStyledParagraphsFromText(text: string) {
   });
 }
 
-export async function buildDocx(title: string, text: string) {
-  const children = [
-    new Paragraph({
-      children: [new TextRun({ text: title, bold: true })],
-      heading: HeadingLevel.HEADING_1,
-      spacing: { after: 120 },
-      border: {
-        bottom: {
-          color: "D9E0EF",
-          style: BorderStyle.SINGLE,
-          size: 6,
-          space: 6,
-        },
-      },
-    }),
-    new Paragraph({
-      text: `Prepared by Estonian Job Agent • ${formatExportDate()}`,
-      spacing: { after: 260 },
-      thematicBreak: false,
-    }),
-    ...createStyledParagraphsFromText(text),
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 260 },
-      children: [
-        new TextRun({
-          children: ["Page ", PageNumber.CURRENT],
-        }),
-      ],
-    }),
-  ];
+export async function buildDocx(_title: string, text: string) {
+  const children = createStyledParagraphsFromText(text);
 
   const doc = new Document({
     styles: {
@@ -95,6 +53,32 @@ export async function buildDocx(title: string, text: string) {
           paragraph: {
             spacing: {
               line: 320,
+            },
+          },
+        },
+        heading1: {
+          run: {
+            bold: true,
+            size: 28,
+            color: "16213E",
+          },
+          paragraph: {
+            spacing: {
+              before: 220,
+              after: 100,
+            },
+          },
+        },
+        heading2: {
+          run: {
+            bold: true,
+            size: 26,
+            color: "16213E",
+          },
+          paragraph: {
+            spacing: {
+              before: 220,
+              after: 100,
             },
           },
         },
