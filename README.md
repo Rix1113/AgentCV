@@ -22,6 +22,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - Dashboard, history, and settings pages
 - Analysis and generation API routes
 - OpenAI-backed prompt pipeline
+- Split AI model routing for lower-cost analysis and higher-quality document writing
 - Per-section DOCX and PDF download flow
 - Supabase Auth-ready account flow
 - Sign-in, sign-up, and password reset screens
@@ -38,21 +39,26 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 ## Quick start
 1. Copy `.env.example` to `.env.local`
 2. Add `OPENAI_API_KEY`
-3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for Supabase Auth
-4. Add `SUPABASE_SERVICE_ROLE_KEY` if you want project persistence in Supabase Postgres
-5. Add `ADMIN_EMAILS` as a comma-separated allowlist for the `/admin` analytics page, for example `ADMIN_EMAILS=founder@example.com,ops@example.com`
-6. Optionally add `PRO_PLAN_EMAILS` as a comma-separated fallback allowlist for users who should start on the `pro` plan before you manage plans in Supabase
-7. Optionally tune plan limits with `PLAN_FREE_*` and `PLAN_PRO_*` env vars
-8. In Supabase SQL Editor, run [supabase/schema.sql](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/supabase/schema.sql) to create the required tables and indexes
-9. Install dependencies:
+3. Set AI models:
+   `OPENAI_ANALYSIS_MODEL=gpt-4o-mini`
+   `OPENAI_GENERATION_MODEL=gpt-5.2`
+   or use legacy `OPENAI_MODEL` to force one model for all AI tasks
+4. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for Supabase Auth
+5. Add `SUPABASE_SERVICE_ROLE_KEY` if you want project persistence in Supabase Postgres
+6. Add `ADMIN_EMAILS` as a comma-separated allowlist for the `/admin` analytics page, for example `ADMIN_EMAILS=founder@example.com,ops@example.com`
+7. Optionally add `PRO_PLAN_EMAILS` as a comma-separated fallback allowlist for users who should start on the `pro` plan before you manage plans in Supabase
+8. Optionally tune plan limits with `PLAN_FREE_*` and `PLAN_PRO_*` env vars
+9. In Supabase SQL Editor, run [supabase/schema.sql](/Users/rix/Documents/Progremine/Agents/CV/estonian-job-agent/supabase/schema.sql) to create the required tables and indexes
+10. Install dependencies:
    npm install
-10. Verify the checked-in ESLint setup:
+11. Verify the checked-in ESLint setup:
    npm run lint
-11. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`, so sign-in confirmations and password reset links can return to the app
-12. Start dev server:
+12. In Supabase Auth settings, add your local URL to redirect/allowed origins, for example `http://localhost:3000/auth`, so sign-in confirmations and password reset links can return to the app
+13. Start dev server:
    npm run dev
 
 ## Security and Reliability Improvements
+- AI document generation now supports task-specific model selection, with a lower-cost analysis model and a higher-quality generation/regeneration model path.
 - Admin plan updates resolve the managed user server-side via bound action arguments and auth/profile lookup, never trusting posted hidden fields.
 - Export actions send `projectId`, `section`, and `format`, only download successful file responses, and surface non-OK payloads inline.
 - Analysis, generation, regeneration, and export endpoints enforce plan-aware daily caps and rate windows server-side.
@@ -75,6 +81,7 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 ## Recommended Next Work
 - Replace in-memory quota fallback with durable behavior or explicit degraded-mode controls.
 - Move admin analytics toward database-level aggregation or precomputed summaries.
+- Add evaluation fixtures for Estonian writing quality so prompt/model changes can be judged against real examples instead of by ad hoc manual review.
 - Add production-grade smoke tests for auth, quotas, generation, export, and admin flows.
 - Document deployment expectations, environment requirements, and operational failure modes more explicitly.
 
@@ -97,6 +104,8 @@ A premium starter web app that turns a CV and a job ad into polished Estonian ap
 - CV text is capped at `20,000` characters and job-ad text at `16,000` characters. The form now shows those limits, manual entry is capped in the textarea, upload parsing enforces them after text extraction, and oversized API payloads return `413` errors.
 - The `documents` JSON now also stores per-section version history under `_history`, so no extra database column is required.
 - Billing is still a scaffold-level placeholder, but analysis, generation, regeneration, and export endpoints now enforce plan-aware daily caps and rate windows server-side.
+- AI requests can now use separate env-configured models: `OPENAI_ANALYSIS_MODEL` defaults to `gpt-4o-mini`, while `OPENAI_GENERATION_MODEL` defaults to `gpt-5.2`; legacy `OPENAI_MODEL` remains supported as a fallback override.
+- Generation and regeneration prompts now steer more explicitly toward polished, professional, non-repetitive Estonian output for CVs, motivation letters, and self-introductions.
 - Analysis requests count against the same generation quota and retry window used for document generation and section regeneration.
 - Export failures now stay inline in the review workspace, so plan/auth/rate-limit JSON errors are shown to the user instead of being downloaded as broken `.pdf` or `.docx` files.
 - Export downloads are now section-specific through `/api/projects`, so analysis, CV, motivation letter, short self-introduction, and long self-introduction are downloaded separately instead of as one bundled file.

@@ -20,8 +20,11 @@ import {
 import type { AnalysisResult, DocumentSectionKey, GeneratedDocuments } from "@/types";
 import type { Response as OpenAIResponse, ResponseOutputItem, ResponseOutputMessage } from "openai/resources/responses/responses";
 
-const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 const MAX_MODEL_ATTEMPTS = 2;
+
+const LEGACY_MODEL = process.env.OPENAI_MODEL;
+const ANALYSIS_MODEL = process.env.OPENAI_ANALYSIS_MODEL ?? LEGACY_MODEL ?? "gpt-4o-mini";
+const GENERATION_MODEL = process.env.OPENAI_GENERATION_MODEL ?? LEGACY_MODEL ?? "gpt-5.2";
 
 function isOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
   return item.type === "message";
@@ -70,6 +73,7 @@ function validateGeneratedDocuments(documents: GeneratedDocuments) {
 }
 
 async function createJsonResponse(
+  model: string,
   userContent: string,
   schemaName: string,
   schema: Record<string, unknown>,
@@ -77,7 +81,7 @@ async function createJsonResponse(
 ) {
   const client = getOpenAIClient();
   const response = await client.responses.create({
-    model: MODEL,
+    model,
     input: [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -105,6 +109,7 @@ export async function analyzeInputs(cvText: string, jobAdText: string): Promise<
 
   for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
     const rawOutput = await createJsonResponse(
+      ANALYSIS_MODEL,
       userContent,
       "analysis",
       analysisResponseJsonSchema,
@@ -136,6 +141,7 @@ export async function generateDocuments(cvText: string, jobAdText: string, analy
 
   for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
     const rawOutput = await createJsonResponse(
+      GENERATION_MODEL,
       userContent,
       "documents",
       generationResponseJsonSchema,
@@ -188,6 +194,7 @@ export async function regenerateDocumentSection(
 
   for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
     const rawOutput = await createJsonResponse(
+      GENERATION_MODEL,
       userContent,
       "regenerated_section",
       createSectionRegenerationResponseJsonSchema(section),

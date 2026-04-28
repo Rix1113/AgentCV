@@ -29,6 +29,8 @@ Writing quality rules:
 - Write in professional, natural, modern Estonian.
 - Be specific, concise, and role-relevant.
 - Avoid generic filler, cliches, and empty claims.
+- Prefer clear, confident professional phrasing over exaggerated sales language.
+- Keep sentence flow smooth and human, not templated or repetitive.
 - Tailor emphasis and wording to the job advertisement only where factually supported by the CV.
 - Preserve consistency across all generated sections.
 - Avoid repeating the same sentences across outputs.
@@ -88,6 +90,7 @@ Global rules:
 - Use "Vajab täpsustamist" where important information is missing or unclear.
 - Keep all sections mutually consistent.
 - Avoid repeating the same wording across all outputs.
+- Make each output feel intentionally different in purpose, structure, and level of detail.
 - Tailor wording to the job ad only where factually supported.
 - Return JSON only. No markdown, no code fences, no commentary.
 
@@ -103,7 +106,9 @@ Section requirements:
 - Emphasize relevant experience and skills supported by the CV.
 - Preserve factual accuracy.
 - Use cautious wording when information is incomplete.
-- Prefer headings like Nimi, Kontakt, Profiil, Tookogemus, Haridus, Oskused, Keeled, Sertifikaadid, Lisainfo only when supported by the CV.
+- Prefer headings like Nimi, Kontakt, Profiil, Töökogemus, Haridus, Oskused, Keeled, Sertifikaadid, Lisainfo only when supported by the CV.
+- Rewrite awkward source phrasing into polished professional Estonian while preserving the original meaning.
+- Use concise bullets for experience and skills when they improve readability.
 - Do not create empty sections unless needed for clarity.
 
 3. motivation_letter_et
@@ -112,21 +117,30 @@ Section requirements:
 - Must sound natural and credible.
 - Should explain fit using supported evidence only.
 - Must not include unsupported claims, fake enthusiasm, or invented achievements.
+- Open with a direct, professional introduction rather than a generic formula.
+- Use 3-5 coherent paragraphs with a clear progression: role interest, relevant evidence, value to the employer, and professional close.
+- Keep the tone measured and credible, avoiding over-selling, flattery, or emotional exaggeration.
+- End with a polished, business-appropriate closing.
 
 4. statement_short_et
 - Indicative length: around 50-80 words.
 - A concise professional self-introduction in Estonian.
 - Must be a complete standalone paragraph, not a fragment.
+- Sound like a strong spoken or written introduction for a recruiter conversation.
+- Prioritize core profile, relevant strengths, and role fit in a compact form.
 
 5. statement_long_et
 - Indicative length: around 100-150 words.
 - A more developed professional self-introduction in Estonian.
 - Must be clearly longer and more detailed than statement_short_et without repeating it verbatim.
+- Expand the short introduction with more context, not with filler.
+- Keep a polished, interview-ready tone that remains concise and specific.
 
 Style rules:
 - Professional, modern, polished Estonian.
 - Specific over generic.
 - Natural tone, not robotic.
+- Professional and credible, not overly casual and not overly ornate.
 - Do not overuse job-ad keywords unnaturally.`;
 
 export const SECTION_REGENERATION_INSTRUCTIONS = `Regenerate exactly one requested Estonian application section and return only valid JSON.
@@ -146,6 +160,7 @@ Rules:
 - Use "Vajab täpsustamist" where needed.
 - Improve clarity, specificity, tone, and usefulness without changing the factual basis.
 - Avoid repeating phrasing from prior outputs where possible.
+- Keep the rewritten section polished, professional, and distinct from earlier wording.
 - Return JSON only. No markdown, no commentary.
 
 Section-specific constraints:

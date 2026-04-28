@@ -10,6 +10,7 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 5. Add regression coverage for shared input-limit enforcement across paste, upload, and API flows.
 6. Add regression coverage for section-specific downloads so each document exports only the active section in both `pdf` and `docx` formats.
 7. Audit remaining date/time rendering paths and decide whether they should use the shared fixed UTC formatter or a fully server-specified timezone/locale contract.
+8. Create a small evaluation set of CV and job-ad pairs to compare writing quality across prompt and model changes, especially for professional Estonian tone and factual precision.
 
 ## Near-term engineering work
 1. Replace analytics aggregation from "latest 1000 events in memory" with database-backed aggregation or precomputed summaries.
@@ -18,6 +19,7 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 3. Add tests for `lib/plans.ts`, especially daily reset boundaries, rate-window handling, and fallback plan resolution.
 4. Add tests for `lib/store.ts` covering missing-table fallback, user profile writes, and usage event retrieval.
 5. Add structured logging around auth failures, plan denials, export failures, and Supabase persistence errors.
+6. Consider whether analysis and generation should remain split across different default models or become fully configurable per section/workflow.
 
 ## Product and platform hardening
 1. Add admin search, filtering, and pagination so the user management page remains usable as the auth user list grows.
@@ -33,6 +35,8 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 4. Add load-testing or at least bounded-volume testing for analytics and admin user listing.
 5. Add CI checks that cover lint, type safety, and a minimal smoke test suite.
 6. Audit the UI for clear error messaging when auth, quotas, or exports fail.
+7. Add human-review criteria for document quality:
+   professional tone, non-repetition, factual grounding, and natural Estonian phrasing.
 
 ## Longer-term opportunities
 1. Introduce billing and subscription lifecycle management instead of env-driven bootstrap plan assignment.
@@ -47,6 +51,8 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 - Refactored homepage to remove workflow step repetitions
 - Expanded README.md with architecture notes, technical gaps, and recommended next work
 - Reworked NEXT_STEPS.md into a clearer engineering and product roadmap
+- Split AI model selection into analysis and generation defaults, keeping `OPENAI_MODEL` as a backward-compatible fallback
+- Tightened AI prompts so CVs, motivation letters, and self-introductions aim for more polished, professional, less repetitive Estonian output
 - Added a Supabase password reset flow so users can request a reset link and choose a new password from `/auth`
 - Added shared schema validation for `/api/analyze` and `/api/generate` so malformed request bodies fail fast and consistently
 - Defined shared max input sizes for CV and job-ad text, added UI guidance plus character counters, and enforced API-side `413` rejection for oversized inputs
@@ -59,6 +65,7 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 - CV text is now capped at `20,000` characters and job-ad text at `16,000` characters across the form, upload parsing, project creation, analysis, generation, and regeneration flows.
 - The auth flow now includes a "Forgot your password?" path that sends a Supabase recovery email and lets the user set a new password when they return to `/auth`.
 - `npm run lint` is now backed by a checked-in ESLint flat config plus direct ESLint CLI usage, so local development and CI no longer hit Next.js's interactive setup prompt.
+- AI analysis and document writing can now use separate env-configured models, which makes it easier to keep analysis costs lower while improving output quality for user-facing documents.
 - Admin plan updates now resolve the managed user on the server via a bound action argument plus auth/profile lookup, instead of trusting posted hidden fields.
 - Export actions now send `projectId` and only download successful file responses; non-OK export payloads are surfaced inline in the review workspace.
 - Export downloads now require `projectId`, `section`, and `format`, and they return only the currently selected document section rather than a combined file.
