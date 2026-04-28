@@ -74,11 +74,12 @@ export function ResultsWorkspace({ project }: { project: Project }) {
     setStatus(null);
 
     try {
-      const res = await fetch(`/api/export/${kind}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, documents: content }),
+      const query = new URLSearchParams({
+        projectId: project.id,
+        section: activeTab,
+        format: kind,
       });
+      const res = await fetch(`/api/projects?${query.toString()}`);
       const contentType = res.headers.get("Content-Type") ?? "";
 
       if (!res.ok) {
@@ -114,7 +115,7 @@ export function ResultsWorkspace({ project }: { project: Project }) {
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setStatus(`${kind.toUpperCase()} exported.`);
+      setStatus(`${activeLabel} downloaded as ${kind.toUpperCase()}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to export ${kind.toUpperCase()}.`);
     } finally {
@@ -190,11 +191,19 @@ export function ResultsWorkspace({ project }: { project: Project }) {
               <button className="button-secondary" onClick={() => void regenerateActiveSection()} disabled={saving || regenerating || exporting !== null}>
                 {regenerating ? "Regenerating..." : "Regenerate"}
               </button>
-              <button className="button-secondary" onClick={() => void exportFile("docx")} disabled={saving || regenerating || exporting !== null}>
-                {exporting === "docx" ? "Exporting..." : "DOCX"}
+              <button
+                className="button-secondary"
+                onClick={() => void exportFile("docx")}
+                disabled={saving || regenerating || exporting !== null || content[activeTab].trim().length === 0}
+              >
+                {exporting === "docx" ? "Downloading..." : "Download DOCX"}
               </button>
-              <button className="button-secondary" onClick={() => void exportFile("pdf")} disabled={saving || regenerating || exporting !== null}>
-                {exporting === "pdf" ? "Exporting..." : "PDF"}
+              <button
+                className="button-secondary"
+                onClick={() => void exportFile("pdf")}
+                disabled={saving || regenerating || exporting !== null || content[activeTab].trim().length === 0}
+              >
+                {exporting === "pdf" ? "Downloading..." : "Download PDF"}
               </button>
             </div>
           </div>

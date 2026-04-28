@@ -7,6 +7,7 @@ import {
   JOB_AD_TEXT_MIN_LENGTH,
   PROJECT_TITLE_MAX_LENGTH,
 } from "@/lib/input-limits";
+import { DOCUMENT_SECTION_KEYS } from "@/types";
 import { z } from "zod";
 
 const cvTextSchema = z
@@ -94,6 +95,12 @@ export const updateProjectDocumentsSchema = z.object({
     })
     .partial()
     .optional(),
+});
+
+export const projectDocumentExportQuerySchema = z.object({
+  projectId: z.string().min(1, "Project id is required"),
+  section: z.enum(DOCUMENT_SECTION_KEYS),
+  format: z.enum(["docx", "pdf"]),
 });
 
 export function formatValidationErrors(error: z.ZodError) {

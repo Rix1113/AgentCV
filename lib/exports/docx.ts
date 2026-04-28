@@ -1,5 +1,4 @@
 import { Document, Packer, Paragraph, HeadingLevel } from "docx";
-import type { GeneratedDocuments } from "@/types";
 
 function createParagraphsFromText(text: string) {
   if (!text) {
@@ -14,18 +13,10 @@ function createParagraphsFromText(text: string) {
   });
 }
 
-export async function buildDocx(documents: GeneratedDocuments) {
+export async function buildDocx(title: string, text: string) {
   const children = [
-    new Paragraph({ text: "Analüüs ja sobivuse kokkuvõte", heading: HeadingLevel.HEADING_1 }),
-    ...createParagraphsFromText(documents.analysis_summary_et),
-    new Paragraph({ text: "CV", heading: HeadingLevel.HEADING_1 }),
-    ...createParagraphsFromText(documents.cv_et),
-    new Paragraph({ text: "Motivatsioonikiri", heading: HeadingLevel.HEADING_1 }),
-    ...createParagraphsFromText(documents.motivation_letter_et),
-    new Paragraph({ text: "Enesetutvustus – lühike versioon", heading: HeadingLevel.HEADING_1 }),
-    ...createParagraphsFromText(documents.statement_short_et),
-    new Paragraph({ text: "Enesetutvustus – pikk versioon", heading: HeadingLevel.HEADING_1 }),
-    ...createParagraphsFromText(documents.statement_long_et),
+    new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }),
+    ...createParagraphsFromText(text),
   ];
 
   const doc = new Document({

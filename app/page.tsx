@@ -37,7 +37,6 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/dashboard" className="button-primary">Start building</Link>
-              <Link href="/demo" className="button-secondary">Try demo</Link>
               <Link href="/history" className="button-secondary">View history</Link>
             </div>
             <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-3">

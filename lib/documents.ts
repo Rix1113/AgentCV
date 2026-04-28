@@ -16,6 +16,22 @@ export const DOCUMENT_SECTION_LABELS: Record<DocumentSectionKey, string> = {
   statement_long_et: "Pikk enesetutvustus",
 };
 
+export const DOCUMENT_SECTION_EXPORT_TITLES: Record<DocumentSectionKey, string> = {
+  analysis_summary_et: "Analüüs ja sobivuse kokkuvõte",
+  cv_et: "CV",
+  motivation_letter_et: "Motivatsioonikiri",
+  statement_short_et: "Enesetutvustus - luhike versioon",
+  statement_long_et: "Enesetutvustus - pikk versioon",
+};
+
+export const DOCUMENT_SECTION_FILENAME_PARTS: Record<DocumentSectionKey, string> = {
+  analysis_summary_et: "analysis",
+  cv_et: "cv",
+  motivation_letter_et: "motivation-letter",
+  statement_short_et: "short-self-introduction",
+  statement_long_et: "long-self-introduction",
+};
+
 export function createEmptyStoredDocuments(): StoredDocuments {
   return DOCUMENT_SECTION_KEYS.reduce((acc, key) => {
     acc[key] = "";
@@ -29,6 +45,17 @@ export function hasGeneratedDocuments(documents?: StoredDocuments): documents is
   }
 
   return DOCUMENT_SECTION_KEYS.some((key) => documents[key].trim().length > 0);
+}
+
+export function buildDocumentExportFilename(projectTitle: string, section: DocumentSectionKey, format: "docx" | "pdf") {
+  const safeProjectTitle = projectTitle
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "project";
+
+  return `${safeProjectTitle}-${DOCUMENT_SECTION_FILENAME_PARTS[section]}.${format}`;
 }
 
 export function toGeneratedDocuments(documents: StoredDocuments | GeneratedDocuments): GeneratedDocuments {
