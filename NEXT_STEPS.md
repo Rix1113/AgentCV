@@ -37,6 +37,7 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 3. Add background jobs or queues for heavier generation/export work if latency becomes a problem.
 4. Consider versioned API request and response contracts if external integrations are planned.
 5. Add localization and multi-market support if the product expands beyond the Estonian-first workflow.
+6. How many users send a query at the same time, how to resolve?
 
 ## Completed
 - Documented security hardening improvements in README.md and NEXT_STEPS.md
