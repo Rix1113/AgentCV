@@ -1,4 +1,5 @@
 import type { PlanUsageSummary } from "@/types";
+import { formatIsoDateTimeUtc } from "@/lib/utils";
 
 function formatPlanName(plan: PlanUsageSummary["plan"]) {
   if (plan === "free") {
@@ -19,10 +20,7 @@ function formatRemainingText(value: number | null, limit: number | null) {
 }
 
 function formatResetTime(iso: string) {
-  return new Date(iso).toLocaleString([], {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  return formatIsoDateTimeUtc(iso);
 }
 
 export function PlanUsageCard({

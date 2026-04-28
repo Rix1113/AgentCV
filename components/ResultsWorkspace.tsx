@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { DOCUMENT_SECTION_KEYS, type DocumentSectionKey, type DocumentVersionSource, type Project } from "@/types";
 import { DOCUMENT_SECTION_LABELS, normalizeStoredDocuments } from "@/lib/documents";
+import { formatIsoDateTimeUtc } from "@/lib/utils";
 
 const tabs = DOCUMENT_SECTION_KEYS.map((key) => ({
   key,
@@ -255,7 +256,7 @@ export function ResultsWorkspace({ project }: { project: Project }) {
                       {sourceLabels[version.source]}
                       {isCurrent ? " · Current" : ""}
                     </p>
-                    <p className="mt-1 text-xs text-muted">{new Date(version.createdAt).toLocaleString()}</p>
+                    <p className="mt-1 text-xs text-muted">{formatIsoDateTimeUtc(version.createdAt)}</p>
                   </div>
                   {!isCurrent ? (
                     <button className="button-secondary px-4 py-2 text-sm" onClick={() => void restoreVersion(version.id)} disabled={saving || regenerating || exporting !== null}>
