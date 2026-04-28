@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Copy, Download, History, RefreshCw, Save, Sparkles } from "lucide-react";
 import { DOCUMENT_SECTION_KEYS, type DocumentSectionKey, type DocumentVersionSource, type Project } from "@/types";
 import { DOCUMENT_SECTION_LABELS, normalizeStoredDocuments } from "@/lib/documents";
 import { formatIsoDateTimeUtc } from "@/lib/utils";
@@ -17,6 +18,25 @@ const sourceLabels: Record<DocumentVersionSource, string> = {
   restored: "Restored",
 };
 
+function WorkspaceActionButton({
+  children,
+  icon,
+  disabled,
+  onClick,
+}: {
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button className="button-secondary gap-2 text-sm" onClick={onClick} disabled={disabled}>
+      {icon}
+      {children}
+    </button>
+  );
+}
+
 export function ResultsWorkspace({ project }: { project: Project }) {
   const [activeTab, setActiveTab] = useState<DocumentSectionKey>("analysis_summary_et");
   const [content, setContent] = useState(() => normalizeStoredDocuments(project.documents!, project.updatedAt));
@@ -27,6 +47,8 @@ export function ResultsWorkspace({ project }: { project: Project }) {
   const [exporting, setExporting] = useState<"docx" | "pdf" | null>(null);
   const activeLabel = useMemo(() => tabs.find((tab) => tab.key === activeTab)?.label ?? "Document", [activeTab]);
   const activeHistory = useMemo(() => [...(content._history?.[activeTab] ?? [])].reverse(), [activeTab, content]);
+  const currentLength = content[activeTab].trim().length;
+  const projectUpdated = formatIsoDateTimeUtc(project.updatedAt);
 
   async function copyCurrent() {
     await navigator.clipboard.writeText(content[activeTab]);
@@ -173,104 +195,161 @@ export function ResultsWorkspace({ project }: { project: Project }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <section className="card p-6 sm:p-8">
-        <div className="mb-8 flex flex-col gap-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">Review workspace</p>
-              <h1 className="mt-3 text-4xl font-semibold text-ink">Refine each document section before export.</h1>
-              <p className="mt-3 helper-text">
-                Save polished edits, regenerate weaker sections, and keep version history close at hand while you work.
-              </p>
-            </div>
-            <div className="card-muted flex flex-wrap gap-3 p-3">
-              <button className="button-secondary" onClick={copyCurrent}>Copy</button>
-              <button className="button-secondary" onClick={() => void persistDocuments(content)} disabled={saving || regenerating || exporting !== null}>
-                {saving ? "Saving..." : "Save"}
-              </button>
-              <button className="button-secondary" onClick={() => void regenerateActiveSection()} disabled={saving || regenerating || exporting !== null}>
-                {regenerating ? "Regenerating..." : "Regenerate"}
-              </button>
-              <button
-                className="button-secondary"
-                onClick={() => void exportFile("docx")}
-                disabled={saving || regenerating || exporting !== null || content[activeTab].trim().length === 0}
-              >
-                {exporting === "docx" ? "Downloading..." : "Download DOCX"}
-              </button>
-              <button
-                className="button-secondary"
-                onClick={() => void exportFile("pdf")}
-                disabled={saving || regenerating || exporting !== null || content[activeTab].trim().length === 0}
-              >
-                {exporting === "pdf" ? "Downloading..." : "Download PDF"}
-              </button>
+    <div className="grid gap-6">
+      <section className="hero-panel overflow-hidden p-6 sm:p-8">
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+          <div className="max-w-3xl">
+            <p className="eyebrow">Review workspace</p>
+            <h1 className="mt-5 text-4xl font-semibold leading-[0.98] text-ink sm:text-5xl">Refine each section until the application feels ready to send.</h1>
+            <p className="mt-4 helper-text">
+              Save polished edits, regenerate weaker sections, and keep version history close at hand while you work.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <span className="rounded-full border border-accent/15 bg-white/85 px-4 py-2 text-sm font-semibold text-ink">{project.title}</span>
+              <span className="rounded-full border border-white/80 bg-white/70 px-4 py-2 text-sm text-muted">Updated {projectUpdated}</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={tab.key === activeTab ? "button-primary" : "button-secondary"}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <div className="metric-tile">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Active section</p>
+              <p className="mt-3 text-2xl font-semibold text-ink">{activeLabel}</p>
+            </div>
+            <div className="metric-tile">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Characters</p>
+              <p className="mt-3 text-2xl font-semibold text-ink">{currentLength.toLocaleString()}</p>
+            </div>
+            <div className="metric-tile">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Versions</p>
+              <p className="mt-3 text-2xl font-semibold text-ink">{activeHistory.length}</p>
+            </div>
           </div>
-        </div>
-
-        {status ? <p className="mb-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{status}</p> : null}
-        {error ? <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-
-        <div className="card-muted p-4 sm:p-5">
-          <label className="label">{activeLabel}</label>
-          <textarea
-            className="min-h-[34rem] w-full rounded-[24px] border border-border bg-white p-4 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
-            value={content[activeTab]}
-            onChange={(e) => setContent({ ...content, [activeTab]: e.target.value })}
-          />
         </div>
       </section>
 
-      <aside className="card p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">Version history</p>
-            <h2 className="mt-3 text-2xl font-semibold text-ink">{activeLabel}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">Every generation, save, and restore creates a snapshot for this section.</p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3">
-          {activeHistory.map((version, index) => {
-            const isCurrent = index === 0 && version.content === content[activeTab];
-
-            return (
-              <div key={version.id} className="card-muted p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-ink">
-                      {sourceLabels[version.source]}
-                      {isCurrent ? " · Current" : ""}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">{formatIsoDateTimeUtc(version.createdAt)}</p>
-                  </div>
-                  {!isCurrent ? (
-                    <button className="button-secondary px-4 py-2 text-sm" onClick={() => void restoreVersion(version.id)} disabled={saving || regenerating || exporting !== null}>
-                      Restore
-                    </button>
-                  ) : null}
-                </div>
-                <p className="mt-3 max-h-40 overflow-hidden whitespace-pre-wrap text-sm leading-6 text-muted">{version.content}</p>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <section className="card p-6 sm:p-8">
+          <div className="mb-8 flex flex-col gap-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">Editor</p>
+                <h2 className="mt-3 text-3xl font-semibold text-ink">Focused editing with export-ready output.</h2>
+                <p className="mt-3 helper-text">
+                Save polished edits, regenerate weaker sections, and keep version history close at hand while you work.
+                </p>
               </div>
-            );
-          })}
-          {!activeHistory.length ? <p className="text-sm text-muted">No versions yet.</p> : null}
-        </div>
-      </aside>
+              <div className="card-muted flex flex-wrap gap-3 p-3">
+                <WorkspaceActionButton icon={<Copy className="h-4 w-4" />} onClick={() => void copyCurrent()}>
+                  Copy
+                </WorkspaceActionButton>
+                <WorkspaceActionButton
+                  icon={<Save className="h-4 w-4" />}
+                  onClick={() => void persistDocuments(content)}
+                  disabled={saving || regenerating || exporting !== null}
+                >
+                  {saving ? "Saving..." : "Save"}
+                </WorkspaceActionButton>
+                <WorkspaceActionButton
+                  icon={<Sparkles className="h-4 w-4" />}
+                  onClick={() => void regenerateActiveSection()}
+                  disabled={saving || regenerating || exporting !== null}
+                >
+                  {regenerating ? "Regenerating..." : "Regenerate"}
+                </WorkspaceActionButton>
+                <WorkspaceActionButton
+                  icon={<Download className="h-4 w-4" />}
+                  onClick={() => void exportFile("docx")}
+                  disabled={saving || regenerating || exporting !== null || content[activeTab].trim().length === 0}
+                >
+                  {exporting === "docx" ? "Downloading..." : "DOCX"}
+                </WorkspaceActionButton>
+                <WorkspaceActionButton
+                  icon={<Download className="h-4 w-4" />}
+                  onClick={() => void exportFile("pdf")}
+                  disabled={saving || regenerating || exporting !== null || content[activeTab].trim().length === 0}
+                >
+                  {exporting === "pdf" ? "Downloading..." : "PDF"}
+                </WorkspaceActionButton>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`rounded-[22px] border px-4 py-4 text-left transition ${
+                    tab.key === activeTab
+                      ? "border-accent/20 bg-accentSoft text-accent shadow-soft"
+                      : "border-border/80 bg-white/70 text-muted hover:border-accent/20 hover:bg-white hover:text-ink"
+                  }`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em]">Section</p>
+                  <p className="mt-2 text-base font-semibold">{tab.label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {status ? <p className="status-panel mb-4 border-emerald-200 bg-emerald-50/95 text-emerald-700">{status}</p> : null}
+          {error ? <p className="status-panel mb-4 border-rose-200 bg-rose-50/95 text-rose-700">{error}</p> : null}
+
+          <div className="card-muted p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <label className="label mb-0">{activeLabel}</label>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                {currentLength.toLocaleString()} chars
+              </span>
+            </div>
+            <textarea
+              className="editor-textarea"
+              value={content[activeTab]}
+              onChange={(e) => setContent({ ...content, [activeTab]: e.target.value })}
+            />
+          </div>
+        </section>
+
+        <aside className="card p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-muted">
+                <History className="h-4 w-4" />
+                <span>Version history</span>
+              </div>
+              <h2 className="mt-3 text-2xl font-semibold text-ink">{activeLabel}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted">Every generation, save, and restore creates a snapshot for this section.</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            {activeHistory.map((version, index) => {
+              const isCurrent = index === 0 && version.content === content[activeTab];
+
+              return (
+                <div key={version.id} className="card-muted p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-ink">
+                        {sourceLabels[version.source]}
+                        {isCurrent ? " · Current" : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-muted">{formatIsoDateTimeUtc(version.createdAt)}</p>
+                    </div>
+                    {!isCurrent ? (
+                      <button className="button-secondary gap-2 px-4 py-2 text-sm" onClick={() => void restoreVersion(version.id)} disabled={saving || regenerating || exporting !== null}>
+                        <RefreshCw className="h-4 w-4" />
+                        Restore
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 max-h-40 overflow-hidden whitespace-pre-wrap text-sm leading-6 text-muted">{version.content}</p>
+                </div>
+              );
+            })}
+            {!activeHistory.length ? <p className="text-sm text-muted">No versions yet.</p> : null}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

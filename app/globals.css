@@ -13,10 +13,12 @@ html {
 body {
   @apply bg-background text-ink antialiased;
   background-image:
-    radial-gradient(circle at top left, rgba(55, 93, 251, 0.12), transparent 28rem),
-    radial-gradient(circle at 85% 12%, rgba(14, 165, 233, 0.1), transparent 20rem),
-    linear-gradient(180deg, #fbfcff 0%, #f5f7fb 45%, #eef3ff 100%);
-  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 24rem),
+    radial-gradient(circle at 85% 12%, rgba(14, 165, 233, 0.14), transparent 24rem),
+    radial-gradient(circle at 50% 100%, rgba(251, 191, 36, 0.09), transparent 30rem),
+    linear-gradient(180deg, #fcfdff 0%, #f7f9fd 48%, #eef3fb 100%);
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", "IBM Plex Sans", sans-serif;
+  min-height: 100vh;
 }
 
 h1,
@@ -25,7 +27,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   letter-spacing: -0.03em;
 }
 
@@ -34,15 +36,19 @@ h6 {
 }
 
 .card {
-  @apply rounded-[28px] border border-white/80 bg-surface/90 shadow-card backdrop-blur;
+  @apply rounded-[30px] border border-white/90 bg-surface/90 shadow-card backdrop-blur;
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .card-muted {
-  @apply rounded-[24px] border border-border/70 bg-surfaceAlt/70 shadow-soft;
+  @apply rounded-[24px] border border-border/80 bg-surfaceAlt/75 shadow-soft;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .eyebrow {
-  @apply inline-flex items-center rounded-full border border-accent/15 bg-white/80 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-accent;
+  @apply inline-flex items-center rounded-full border border-accent/15 bg-white/85 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.3em] text-accent;
 }
 
 .section-title {
@@ -62,11 +68,13 @@ h6 {
 }
 
 .input {
-  @apply w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/65 focus:border-accent focus:ring-4 focus:ring-accent/10;
+  @apply w-full rounded-2xl border border-border/90 bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/65 focus:border-accent focus:ring-4 focus:ring-accent/10;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .textarea {
-  @apply min-h-56 w-full rounded-[24px] border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/65 focus:border-accent focus:ring-4 focus:ring-accent/10;
+  @apply min-h-56 w-full rounded-[24px] border border-border/90 bg-white px-4 py-3 text-sm leading-7 text-ink outline-none transition placeholder:text-muted/65 focus:border-accent focus:ring-4 focus:ring-accent/10;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .button-primary {
@@ -74,7 +82,7 @@ h6 {
 }
 
 .button-secondary {
-  @apply inline-flex items-center justify-center rounded-full border border-border bg-white/80 px-5 py-3 font-semibold text-ink transition hover:-translate-y-0.5 hover:border-accent/30 hover:bg-accentSoft/50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60;
+  @apply inline-flex items-center justify-center rounded-full border border-border/90 bg-white/85 px-5 py-3 font-semibold text-ink transition hover:-translate-y-0.5 hover:border-accent/30 hover:bg-accentSoft/50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60;
 }
 
 .button-ghost {
@@ -87,4 +95,44 @@ h6 {
 
 .page-shell {
   @apply mx-auto max-w-7xl px-6 py-10 sm:px-8 lg:px-10;
+}
+
+.hero-panel {
+  @apply relative overflow-hidden rounded-[34px] border border-white/90 bg-white/80 shadow-card backdrop-blur;
+  box-shadow:
+    0 28px 90px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(55, 93, 251, 0.09), transparent 46%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 20rem);
+  pointer-events: none;
+}
+
+.metric-tile {
+  @apply rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-soft backdrop-blur;
+}
+
+.nav-pill {
+  @apply inline-flex items-center gap-2 rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-muted transition;
+}
+
+.nav-pill-active {
+  @apply border-accent/15 bg-accentSoft text-accent;
+}
+
+.status-panel {
+  @apply rounded-[22px] border px-4 py-3 text-sm;
+}
+
+.editor-textarea {
+  @apply min-h-[38rem] w-full resize-none rounded-[28px] border border-border/90 bg-white px-5 py-5 text-[0.95rem] leading-8 text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10;
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 35px rgba(15, 23, 42, 0.04);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useRef, useState } from "react";
+import { FileText, FolderUp, Sparkles } from "lucide-react";
 import { ResultsWorkspace } from "@/components/ResultsWorkspace";
 import type { StoredDocuments } from "@/types";
 import { useRouter } from "next/navigation";
@@ -182,21 +183,39 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
       <div className="card p-6 sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">Project setup</p>
-            <h2 className="mt-3 text-3xl font-semibold text-ink">Name the application and prepare your source material.</h2>
+            <p className="eyebrow">Project setup</p>
+            <h2 className="mt-4 text-3xl font-semibold text-ink sm:text-4xl">Prepare the two texts that shape the whole application.</h2>
             <p className="mt-3 helper-text">
-              Keep the workflow lightweight: add a project title, bring in your CV and the job ad.
+              Keep the workflow lightweight: define the project, add your source material, and let the generator create a structured first draft.
             </p>
           </div>
-          <div className="card-muted px-4 py-3 text-sm text-muted">
-            Upload or paste into both fields before generating.
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="metric-tile min-w-0 p-4">
+              <FileText className="h-5 w-5 text-accent" />
+              <p className="mt-3 text-sm font-semibold text-ink">Paste or upload</p>
+            </div>
+            <div className="metric-tile min-w-0 p-4">
+              <Sparkles className="h-5 w-5 text-accent" />
+              <p className="mt-3 text-sm font-semibold text-ink">Generate drafts</p>
+            </div>
+            <div className="metric-tile min-w-0 p-4">
+              <FolderUp className="h-5 w-5 text-accent" />
+              <p className="mt-3 text-sm font-semibold text-ink">Export clean files</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="card p-6 sm:p-8">
-        <label className="label">Project title</label>
-        <input className="input" value={title} maxLength={PROJECT_TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="card p-6 sm:p-8">
+          <label className="label">Project title</label>
+          <input className="input" value={title} maxLength={PROJECT_TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} />
+          <p className="mt-3 text-sm text-muted">Use a role or company name so the project stays easy to find later.</p>
+        </div>
+        <div className="card-muted p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Requirements</p>
+          <p className="mt-3 text-sm leading-7 text-muted">Both fields are required before generation starts, and longer, cleaner source text usually produces stronger drafts.</p>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -273,19 +292,23 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
         </div>
       </div>
 
-      <div className="card flex flex-wrap items-center justify-between gap-4 p-6 sm:p-8">
-        <div>
-          <p className="text-lg font-semibold text-ink">Ready to generate the first draft?</p>
-          <p className="mt-1 helper-text">You’ll be taken straight into the review workspace once generation finishes.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button className="button-primary" disabled={disableSubmit}>{loading ? "Generating..." : "Generate documents"}</button>
+      <div className="hero-panel p-6 sm:p-8">
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-lg font-semibold text-ink">Ready to generate the first draft?</p>
+            <p className="mt-1 helper-text">You’ll move straight into the review workspace once generation finishes.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button className="button-primary" disabled={disableSubmit}>{loading ? "Generating..." : "Generate documents"}</button>
+          </div>
         </div>
       </div>
 
       {error ? (
-        <div className="card border-rose-200 bg-rose-50/90 p-5 text-sm text-rose-700">
-          {error}
+        <div>
+          <div className="status-panel border-rose-200 bg-rose-50/95 text-rose-700">
+            {error}
+          </div>
         </div>
       ) : null}
     </form>
