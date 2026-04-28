@@ -21,9 +21,12 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
   const router = useRouter();
   const [title, setTitle] = useState("New Application Project");
   const [cvText, setCvText] = useState("");
+  const [jobAdUrl, setJobAdUrl] = useState("");
   const [jobAdText, setJobAdText] = useState("");
+  const [jobAdPreviewTitle, setJobAdPreviewTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingField, setUploadingField] = useState<"cv" | "jobAd" | null>(null);
+  const [fetchingJobAd, setFetchingJobAd] = useState(false);
   const [demoDocuments, setDemoDocuments] = useState<StoredDocuments | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cvFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -162,6 +165,53 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
     }
   }
 
+  async function onFetchJobAd() {
+    const url = jobAdUrl.trim();
+    if (!url) {
+      setError("Paste a vacancy link first.");
+      return;
+    }
+
+    setFetchingJobAd(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/fetch-job-ad", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to fetch vacancy text");
+      }
+
+      setJobAdText(payload.text);
+      setJobAdPreviewTitle(payload.title ?? null);
+
+      if (payload.title && title === "New Application Project") {
+        setTitle(payload.title);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setFetchingJobAd(false);
+    }
+  }
+
+  const jobAdPreviewSnippet =
+    jobAdText.length > 600 ? `${jobAdText.slice(0, 600).trimEnd()}...` : jobAdText;
+  const jobAdPreviewHost = jobAdUrl.trim()
+    ? (() => {
+        try {
+          return new URL(jobAdUrl.trim()).hostname.replace(/^www\./, "");
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
   if (demoDocuments) {
     return <ResultsWorkspace project={{ id: "demo", userId: "demo", title: "Demo Project", cvText, jobAdText, documents: demoDocuments, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }} />;
   }
@@ -170,6 +220,7 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
   const jobAdRemaining = getRemainingCharacters("jobAdText", jobAdText);
   const disableSubmit =
     loading ||
+    fetchingJobAd ||
     uploadingField !== null ||
     title.trim().length < 2 ||
     title.length > PROJECT_TITLE_MAX_LENGTH ||
@@ -263,15 +314,56 @@ export function ProjectForm({ demo = false }: { demo?: boolean }) {
                 Include responsibilities, expectations, and keywords from the posting. Keep it between {formatCharacterCount(JOB_AD_TEXT_MIN_LENGTH)} and {formatCharacterCount(TEXT_INPUT_LIMITS.jobAdText.max)}.
               </p>
             </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="button-secondary text-sm"
+                onClick={() => jobAdFileInputRef.current?.click()}
+                disabled={loading || fetchingJobAd || uploadingField !== null}
+              >
+                {uploadingField === "jobAd" ? "Parsing..." : "Upload PDF/DOCX"}
+              </button>
+            </div>
+          </div>
+          <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <input
+              className="input"
+              type="url"
+              value={jobAdUrl}
+              onChange={(e) => setJobAdUrl(e.target.value)}
+              placeholder="Paste a vacancy link, for example CV-Online or company careers page..."
+            />
             <button
               type="button"
-              className="button-secondary text-sm"
-              onClick={() => jobAdFileInputRef.current?.click()}
-              disabled={loading || uploadingField !== null}
+              className="button-secondary"
+              onClick={() => void onFetchJobAd()}
+              disabled={loading || fetchingJobAd || uploadingField !== null}
             >
-              {uploadingField === "jobAd" ? "Parsing..." : "Upload PDF/DOCX"}
+              {fetchingJobAd ? "Fetching..." : "Fetch from link"}
             </button>
           </div>
+          <p className="mb-4 text-sm text-muted">
+            The app will pull the readable job-ad text into the field below so you can review it before generation.
+          </p>
+          {jobAdText ? (
+            <div className="mb-4 rounded-[28px] border border-slate-200/80 bg-slate-50/90 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Imported preview</p>
+                  <p className="mt-2 text-base font-semibold text-ink">
+                    {jobAdPreviewTitle ?? "Fetched job advertisement"}
+                  </p>
+                </div>
+                <p className="text-sm text-muted">
+                  {jobAdPreviewHost ? `${jobAdPreviewHost} • ` : ""}
+                  {formatCharacterCount(jobAdText.length)}
+                </p>
+              </div>
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted">
+                {jobAdPreviewSnippet}
+              </p>
+            </div>
+          ) : null}
           <input
             ref={jobAdFileInputRef}
             type="file"

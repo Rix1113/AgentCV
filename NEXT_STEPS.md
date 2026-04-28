@@ -11,6 +11,7 @@ Open follow-up work for the Estonian Job Agent lives here so `README.md` can sta
 6. Add regression coverage for section-specific downloads so each document exports only the active section in both `pdf` and `docx` formats.
 7. Audit remaining date/time rendering paths and decide whether they should use the shared fixed UTC formatter or a fully server-specified timezone/locale contract.
 8. Create a small evaluation set of CV and job-ad pairs to compare writing quality across prompt and model changes, especially for professional Estonian tone and factual precision.
+9. CV UPLOAD max 3500 and JOB ad max 7000
 
 ## Near-term engineering work
 1. Replace analytics aggregation from "latest 1000 events in memory" with database-backed aggregation or precomputed summaries.
